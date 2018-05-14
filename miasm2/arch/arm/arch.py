@@ -907,6 +907,8 @@ class arm_offs(arm_imm):
         if (1 << (self.l - 1)) & v:
             v = -((0xffffffff ^ v) + 1)
         v = self.encodeval(v)
+		if v is False:
+				return False
         self.value = (v & 0xffffffff) & self.lmask
         return True
 
@@ -1899,7 +1901,9 @@ class arm_offspc(arm_offs):
         # Remove pipeline offset
         v -= 2 + 2
         if v % 2 == 0:
-            return v >> 1
+			if v > (1 << (self.l - 1)) - 1:
+				return False
+			return v >> 1
         return False
 
 
@@ -2681,7 +2685,8 @@ class armt2_imm11l(arm_imm):
         s = 0
         if v & 0x80000000:
             s = 1
-            v = (-v) & 0xffffffff
+            #v = (-v) & 0xffffffff
+			v &= (1<<26) - 1
         if v >= (1 << 26):
             return False
         if v & 1:
