@@ -30,6 +30,23 @@ from miasm.core.graph import DiGraph
 from functools import reduce
 
 
+def _get_register_of_expr(expr, regs):
+    if expr.is_id():
+        regs.append((str(expr), str(expr)))
+    elif expr.is_mem():
+        _get_register_of_expr(expr.ptr, regs)
+    elif expr.is_op() or expr.is_compose():
+        list_args = expr.args
+        for l in list_args:
+            _get_register_of_expr(l, regs)
+    elif expr.is_slice():
+        _get_register_of_expr(expr.arg, regs)
+    elif expr.is_cond():
+        _get_register_of_expr(expr.src1, regs)
+        _get_register_of_expr(expr.src2, regs)
+        _get_register_of_expr(expr.cond, regs)
+ 
+
 def _expr_loc_to_symb(expr, loc_db):
     if not expr.is_loc():
         return expr
@@ -526,23 +543,27 @@ class IRCFG(DiGraph):
                 'align': 'center',
                 'colspan': 2,
                 'bgcolor': 'grey',
-            }
+            },
+            form="loc",
+            regs=[]
         )
         if node not in self._blocks:
-            yield [self.DotCellDescription(text="NOT PRESENT", attr={})]
+            yield [self.DotCellDescription(text="NOT PRESENT", attr={}, form="unknow", regs={})]
             return
         for i, assignblk in enumerate(self._blocks[node]):
             for dst, src in viewitems(assignblk):
-
+                list_regs = []
+                _get_register_of_expr(dst, list_regs)
+                _get_register_of_expr(src, list_regs)
                 new_src = src.visit(lambda expr:_expr_loc_to_symb(expr, self.loc_db))
                 new_dst = dst.visit(lambda expr:_expr_loc_to_symb(expr, self.loc_db))
                 line = "%s = %s" % (new_dst, new_src)
                 if self._dot_offset:
-                    yield [self.DotCellDescription(text="%-4d" % i, attr={}),
-                           self.DotCellDescription(text=line, attr={})]
+                    yield [self.DotCellDescription(text="%-4d" % i, attr={}, form="offset", regs=[]),
+                           self.DotCellDescription(text=line, attr={}, form="code", regs=list_regs)]
                 else:
-                    yield self.DotCellDescription(text=line, attr={})
-            yield self.DotCellDescription(text="", attr={})
+                    yield self.DotCellDescription(text=line, attr={}, form="code_ir", regs=list_regs)
+            yield self.DotCellDescription(text="", attr={}, form="unknow", regs=[])
 
     def edge_attr(self, src, dst):
         if src not in self._blocks or dst not in self._blocks:
@@ -561,6 +582,9 @@ class IRCFG(DiGraph):
         if node not in self._blocks:
             return {'style': 'filled', 'fillcolor': 'red'}
         return {}
+
+    def svg(self, offset=False):
+        return super(IRCFG, self).svg()
 
     def dot(self, offset=False):
         """

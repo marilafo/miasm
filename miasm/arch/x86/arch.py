@@ -547,7 +547,7 @@ class instruction_x86(instruction):
 
     def __str__(self):
         return self.to_string()
-      
+
     def to_string(self, loc_db=None):
         o = super(instruction_x86, self).to_string(loc_db)
         if self.additional_info.g1.value & 1:
@@ -562,6 +562,17 @@ class instruction_x86(instruction):
             if getattr(self.additional_info.prefixed, 'default', b"") != b"\xF3":
                 o = "REPE %s" % o
         return o
+
+    def get_replace_regs(self, arg=None):
+        args = {}
+        if arg:
+            rep = arg.replace_expr(replace_regs[self.mode])
+            args[arg] = rep
+        else:
+            for a in self.args:
+                rep = a.replace_expr(replace_regs[self.mode])
+                args[a] = rep
+        return args
 
     def get_args_expr(self):
         args = []

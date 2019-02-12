@@ -1,7 +1,53 @@
 from collections import defaultdict, namedtuple
-
 from future.utils import viewitems, viewvalues
+from miasm.core.positioning import Positioning
+import xml.etree.ElementTree as ET
 import re
+
+text_size = 6
+text_space = text_size-2
+text_line_space = text_size+1
+color_loc = "#34c9eb"
+#color_loc = "pink"
+color_str = "#000000"
+
+html_before = """<!DOCTYPE html>
+<html>
+"""
+
+html_after = """
+
+<script>
+//Register
+var set_register = null;
+
+var a = document.querySelectorAll("text");
+for (const b of a) {
+    b.onclick = function() {colorRegister(this)};
+}
+
+
+function colorRegister(a) {
+    var c = a.classList.item(0);
+    if (set_register && set_register != c){
+        var all = document.getElementsByClassName(set_register);
+        for (var i = 0; i < all.length; i++){
+            all[i].style.filter = 'None';
+        }
+    }
+    if (c){
+        set_register = c;
+        var all = document.getElementsByClassName(c);
+        for (var i = 0; i < all.length; i++){
+            all[i].style.filter = 'url(#bg-register)';
+        }
+    }
+}
+
+</script>
+
+</html>
+"""
 
 
 class DiGraph(object):
@@ -10,7 +56,7 @@ class DiGraph(object):
 
     # Stand for a cell in a dot node rendering
     DotCellDescription = namedtuple("DotCellDescription",
-                                    ["text", "attr"])
+                                    ["text", "attr", "form", "regs"])
 
     def __init__(self):
         self._nodes = set()
@@ -19,6 +65,7 @@ class DiGraph(object):
         self._nodes_succ = {}
         # N -> Nodes N2 with a edge (N2 -> N)
         self._nodes_pred = {}
+        self._head = None
 
     def __repr__(self):
         out = []
@@ -33,6 +80,9 @@ class DiGraph(object):
 
     def edges(self):
         return self._edges
+
+    def head(self):
+        return self._head
 
     def merge(self, graph):
         """Merge the current graph with @graph
@@ -110,6 +160,9 @@ class DiGraph(object):
         """Remove edge between @src and @dst if it exits"""
         if (src, dst) in self._edges:
             self.del_edge(src, dst)
+
+    def set_head(self, node):
+        self._head = node
 
     def predecessors_iter(self, node):
         if not node in self._nodes_pred:
@@ -209,7 +262,7 @@ class DiGraph(object):
         A DotCellDescription or a list of DotCellDescription are accepted
         @node: a node of the graph
         """
-        yield self.DotCellDescription(text=str(node), attr={})
+        yield self.DotCellDescription(text=str(node), attr={}, form="", regs={})
 
     def node_attr(self, node):
         """
@@ -238,6 +291,225 @@ class DiGraph(object):
             viewitems(dict(default_attr,
                            **attr))
         )
+
+    def box_positioning_svg(self, g):
+        g.clear()
+        for node in self.nodes():
+            node_id = self.nodeid(node)
+            # Compute size of the box:
+            i = 0
+            max_column = 0
+            tmp_column = 0
+            for lineDesc in self.node2lines(node):
+                if isinstance(lineDesc, self.DotCellDescription):
+                    lineDesc = [lineDesc]
+                for col in lineDesc:
+                    if col.form == "offset":
+                        tmp_column = len(col.text)
+                    else:
+                        if max_column < len(col.text) + tmp_column:
+                            max_column = len(col.text) + tmp_column
+                        tmp_column = 0
+                    if col.form != "offset":
+                        i = i + 1
+
+            node_w = max_column * text_space + 5
+            node_h = (i+1) * text_line_space
+            g.new_box(node_id, height=node_h, width=node_w)
+
+        for src, dst in self.edges():
+            g.link_boxes(self.nodeid(src), self.nodeid(dst))
+
+        g.auto_arrange_boxes()
+
+    def set_loc_text(self, loc_text, text, x, y, id, cl=None):
+        loc_text.text = text
+
+        loc_text.set("x", "%s" % str(x))
+        loc_text.set("y", "%s" % str(y))
+        loc_text.set("id", "%s" % str(id))
+        loc_text.set("font-size", str(text_size))
+        loc_text.set("style",
+                     "font-family:'Monospace';"
+                     "text-anchor:start;fill:%s" % color_str)
+        if cl:
+            loc_text.set("class", cl)
+
+    def format_text_str(self, line, regs, g_node, x, y, id):
+        if regs:
+            regs.sort()
+            elt = regs.pop()
+            if elt[0] not in line:
+                self.format_text_str(line, regs, g_node, x, y, id)
+            else:
+                t = line.split(elt[0])
+                tmp = 0
+                total_len = 0
+                if len(t) > 1:
+                    for s in t:
+                        new_x = total_len * (text_space) + x
+                        total_len += len(" ".join(s.split()))
+                        self.format_text_str(s, list(regs), g_node,
+                                             new_x, y, id)
+                        tmp += 1
+                        if tmp < len(t):
+                            loc_text = ET.SubElement(g_node, "text")
+                            new_x = total_len * (text_space) + x
+                            self.set_loc_text(loc_text, elt[0],
+                                              new_x, y, id, elt[1])
+                            total_len += len(elt[0])
+                else:
+                    loc_text = ET.SubElement(g_node, "text")
+                    self.set_loc_text(loc_text, line, x, y, id)
+        else:
+            loc_text = ET.SubElement(g_node, "text")
+            self.set_loc_text(loc_text, line, x, y, id)
+
+    def svg(self):
+        g_plac = Positioning("1")
+        self.box_positioning_svg(g_plac)
+        """Render svg graph with HTML"""
+
+        svg_xml = ET.Element("svg")
+        # svg_xml.set("xmlns:svg", "http://www.w3.org/2000/svg")
+        svg_xml.set("xmlns", "http://www.w3.org/2000/svg")
+        svg_xml.set("version", "1.1")
+
+        # Permettre de surligner les registres
+        defs = ET.SubElement(svg_xml, "defs")
+        filt = ET.SubElement(defs, "filter")
+        feflood = ET.SubElement(filt, "feFlood")
+        fecomp = ET.SubElement(filt, "feComposite")
+        filt.set("x", "0")
+        filt.set("y", "0")
+        filt.set("width", "1")
+        filt.set("height", "1")
+        filt.set("id", "bg-register")
+        feflood.set("flood-color", "yellow")
+        feflood.set("flood-opacity", "0.4")
+        fecomp.set("in", "SourceGraphic")
+        fecomp.set("operator", "xor")
+
+        g = ET.SubElement(svg_xml, "g")
+        g.set("class", "graph")
+        g_title = ET.SubElement(g, "title")
+
+        svg = {}
+        svg["width"] = 0
+        svg["height"] = 0
+        svg["node"] = []
+        svg["edge"] = []
+
+        n = 0
+        for node in self.nodes():
+            node_id = self.nodeid(node)
+            g_node = ET.SubElement(g, "g")
+            g_node.set("id", "%s" % str(node_id))
+            g_node.set("class", "node")
+            n_title = ET.SubElement(g_node, "title")
+            n_title.set("id", "%s" % "node"+str(node_id))
+            n_title.text = "loc"+str(node_id)
+            p_node = ET.SubElement(g_node, "polygon")
+            p_node.set("stroke", "transparent")
+            p_node.set("style", "fill:%s" % color_loc)
+
+            i = 0
+
+            box_x = g_plac.box_id[self.nodeid(node)].x
+            box_y = g_plac.box_id[self.nodeid(node)].y
+            box_w = g_plac.box_id[self.nodeid(node)].w
+            box_h = g_plac.box_id[self.nodeid(node)].h
+            for lineDesc in self.node2lines(node):
+                if isinstance(lineDesc, self.DotCellDescription):
+                    lineDesc = [lineDesc]
+                for col in lineDesc:
+                    if col.form == "loc":
+                        p_node.set("id", "%s" % col.text)
+                        my_x = box_x + 12
+                    elif col.form == "offset":
+                        my_x = box_x + 5
+                    elif col.form == "code_ir":
+                        my_x = box_x + 5
+                    else:
+                        my_x = box_x + 5 + 8 * text_space
+                    my_y = box_y + text_line_space * (i+1)
+                    self.format_text_str(col.text, col.regs,
+                                         g_node, my_x, my_y, i)
+                    if col.form != "offset":
+                        i = i + 1
+
+            n = n + 1
+
+            node_rect = ET.SubElement(g, "rect")
+            node_rect.set("id", "%s" % "rect"+str(node_id))
+            node_rect.set("style",
+                          "fill:none;fill-opacity:1;"
+                          "stroke:#000000;stroke-width:1;"
+                          "stroke-miterlimit:4;stroke-dasharray:none;"
+                          "stroke-dashoffset:0;stroke-opacity:1")
+            node_rect.set("width", "%s" % str(box_w))
+            node_rect.set("height", "%s" % str(box_h))
+            node_rect.set("x", "%s" % str(box_x))  # Place
+            node_rect.set("y", "%s" % str(box_y))  # Place
+            node_rect.set("ry", "%s" % str(4))
+            p_node.set("points",
+                       "%s,%s %s,%s %s,%s %s,%s"
+                       % (str(box_x + 1),
+                          str(box_y + 1),
+                          str(box_x + 1),
+                          str(box_y + text_line_space + 1),
+                          str(box_x + box_w - 1),
+                          str(box_y + text_line_space + 1),
+                          str(box_x + box_w - 1),
+                          str(box_y + 1)))
+
+        i = 1
+        for src, dst in self.edges():
+
+            attrs = self.edge_attr(src, dst)
+
+            g_edge = ET.SubElement(g, "g")
+            g_edge.set("id", "edge%s%s" % (self.nodeid(src), self.nodeid(dst)))
+            g_edge.set("class", "edge")
+            title_edge = ET.SubElement(g_edge, "title")
+            title_edge.text = "%s to %s" % ((self.nodeid(src)),
+                                            self.nodeid(dst))
+            line_edge = ET.SubElement(g_edge, "path")
+            line_edge.set("fill", "none")
+            line_edge.set("stroke", "%s" % str(attrs['color']))
+            arrow_edge = ET.SubElement(g_edge, "polyline")
+            arrow_edge.set("fill",  "%s" % "none")
+            arrow_edge.set("stroke",  "%s" % str(attrs['color']))
+            arrow_edge.set("stroke-width", "1")
+            e_path = g_plac.edges[self.nodeid(src), self.nodeid(dst)].path
+            print("Edge")
+            print(src, dst)
+            print(e_path)
+            print("\n")
+            arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s"
+                           % (str(e_path[0][0]), str(e_path[0][1]),
+                              str(e_path[0][0]), str(e_path[1][1]),
+                              str(e_path[1][0]), str(e_path[1][1]),
+                              str(e_path[1][0]), str(e_path[3]),
+                              str(e_path[2][0]), str(e_path[3]),
+                              str(e_path[2][0]), str(e_path[2][1])))
+        s = g_plac.boundingbox()
+
+        svg_xml.set("width", "%spt" % str((s[2] - s[0]) * 2 + 50))
+        svg_xml.set("height", "%spt" % str((s[3] - s[1]) * 2 + 50))
+        svg_xml.set("viewBox", "%s %s %s %s" % (str(s[0] - 20),
+                                                str(s[1] - 20),
+                                                str(s[2] - s[0] + 40),
+                                                str(s[3] - s[1] + 40)))
+        g.set("id", "loc?")
+        g_title.set("id", "test")
+        g_title.text = "asm_graph"
+
+        out = html_before
+        out += ET.tostring(svg_xml)
+        out += html_after
+
+        return out.decode()
 
     def dot(self):
         """Render dot graph with HTML"""
