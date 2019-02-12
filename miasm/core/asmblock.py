@@ -385,6 +385,7 @@ class AsmCFG(DiGraph):
     def __init__(self, loc_db=None, *args, **kwargs):
         super(AsmCFG, self).__init__(*args, **kwargs)
         # Edges -> constraint
+        super(AsmCFG, self).set_head(loc_db)
         self.edges2constraint = {}
         # Expected LocKey -> set( (src, dst), constraint )
         self._pendings = {}
@@ -552,7 +553,8 @@ class AsmCFG(DiGraph):
         yield self.DotCellDescription(text=loc_key_name,
                                       attr={'align': 'center',
                                             'colspan': 2,
-                                            'bgcolor': 'grey'})
+                                            'bgcolor': 'grey'},
+                                      form="loc")
         block = self._loc_key_to_block.get(node, None)
         if block is None:
             return
@@ -562,16 +564,19 @@ class AsmCFG(DiGraph):
                     text=block.ERROR_TYPES.get(block._errno,
                                                block._errno
                     ),
-                    attr={})
+                    attr={},
+                    form="unknow")
             ]
             return
         for line in block.lines:
             if self._dot_offset:
                 yield [self.DotCellDescription(text="%.8X" % line.offset,
-                                               attr={}),
-                       self.DotCellDescription(text=line.to_string(self.loc_db), attr={})]
+                                               attr={}, form="offset"),
+                       self.DotCellDescription(text=line.to_string(self.loc_db),
+                                               attr={}, form="code")]
             else:
-                yield self.DotCellDescription(text=line.to_string(self.loc_db), attr={})
+                yield self.DotCellDescription(text=line.to_string(self.loc_db),
+                                              attr={}, form="unknow")
 
     def node_attr(self, node):
         block = self._loc_key_to_block.get(node, None)
@@ -590,6 +595,9 @@ class AsmCFG(DiGraph):
                 edge_color = "limegreen"
 
         return {"color": edge_color}
+
+    def svg(self, offset=False):
+        return super(AsmCFG, self).svg()
 
     def dot(self, offset=False):
         """

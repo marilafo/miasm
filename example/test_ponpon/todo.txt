@@ -1,0 +1,6 @@
+- Loop => tester si on ne touche pas les autres blocs en remontant
+
+- Tester si deux fleches ne se surpose pas sur l'axe X
+- Edge multi level savoir si on passe à droite ou à gauche du bloc
+- Faire un raccord à la sortie des blocks pour ne pas avoir de soucis
+- Rendre le code propre

@@ -526,10 +526,11 @@ class IRCFG(DiGraph):
                 'align': 'center',
                 'colspan': 2,
                 'bgcolor': 'grey',
-            }
+            },
+            form="unknow"
         )
         if node not in self._blocks:
-            yield [self.DotCellDescription(text="NOT PRESENT", attr={})]
+            yield [self.DotCellDescription(text="NOT PRESENT", attr={}, form="unknow")]
             return
         for i, assignblk in enumerate(self._blocks[node]):
             for dst, src in viewitems(assignblk):
@@ -538,11 +539,11 @@ class IRCFG(DiGraph):
                 new_dst = dst.visit(lambda expr:_expr_loc_to_symb(expr, self.loc_db))
                 line = "%s = %s" % (new_dst, new_src)
                 if self._dot_offset:
-                    yield [self.DotCellDescription(text="%-4d" % i, attr={}),
-                           self.DotCellDescription(text=line, attr={})]
+                    yield [self.DotCellDescription(text="%-4d" % i, attr={}, form="unknow"),
+                           self.DotCellDescription(text=line, attr={}, form="unknow")]
                 else:
-                    yield self.DotCellDescription(text=line, attr={})
-            yield self.DotCellDescription(text="", attr={})
+                    yield self.DotCellDescription(text=line, attr={}, form="unknow")
+            yield self.DotCellDescription(text="", attr={}, form="unknow")
 
     def edge_attr(self, src, dst):
         if src not in self._blocks or dst not in self._blocks:
@@ -561,6 +562,9 @@ class IRCFG(DiGraph):
         if node not in self._blocks:
             return {'style': 'filled', 'fillcolor': 'red'}
         return {}
+
+    def svg(self, offset=False):
+        return super(IRCFG, self).svg()
 
     def dot(self, offset=False):
         """

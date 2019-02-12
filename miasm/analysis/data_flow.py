@@ -194,11 +194,12 @@ class DiGraphDefUse(DiGraph):
         yield self.DotCellDescription(text="%s (%s)" % (lbl, index),
                                       attr={'align': 'center',
                                             'colspan': 2,
-                                            'bgcolor': 'grey'})
+                                            'bgcolor': 'grey'},
+                                      form="loc")
         src = self._blocks[lbl][index][reg]
         line = "%s = %s" % (reg, src)
-        yield self.DotCellDescription(text=line, attr={})
-        yield self.DotCellDescription(text="", attr={})
+        yield self.DotCellDescription(text=line, attr={}, form="unknow")
+        yield self.DotCellDescription(text="", attr={}, form="unknow")
 
 
 def dead_simp_useful_assignblks(irarch, defuse, reaching_defs):
@@ -1289,12 +1290,12 @@ class DiGraphLiveness(DiGraph):
                 'align': 'center',
                 'colspan': 2,
                 'bgcolor': 'grey',
-            }
+            },
+            form="unknow"
         )
         if node not in self._blocks:
-            yield [self.DotCellDescription(text="NOT PRESENT", attr={})]
+            yield [self.DotCellDescription(text="NOT PRESENT", attr={}, form="unknow")]
             return
-
         for i, info in enumerate(self._blocks[node].infos):
             var_in = "VarIn:" + ", ".join(str(x) for x in info.var_in)
             var_out = "VarOut:" + ", ".join(str(x) for x in info.var_out)
@@ -1306,18 +1307,20 @@ class DiGraphLiveness(DiGraph):
                     text=var_in,
                     attr={
                         'bgcolor': 'green',
-                    }
+                    },
+                    form = "unknow" 
                 )
 
             for assign in assignmnts:
-                yield self.DotCellDescription(text=assign, attr={})
+                yield self.DotCellDescription(text=assign, attr={}, form="unknow")
             yield self.DotCellDescription(
                 text=var_out,
                 attr={
                     'bgcolor': 'green',
-                }
+                },
+                form = "unknow"
             )
-            yield self.DotCellDescription(text="", attr={})
+            yield self.DotCellDescription(text="", attr={}, form="unknow")
 
     def back_propagate_compute(self, block):
         """
