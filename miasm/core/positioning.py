@@ -1147,9 +1147,9 @@ class Positioning(object):
                           if (self.original_order[x] > n_frm
                               and self.original_order[x] < n_to
                               and x != e.to and x != e.frm)]
-        print("EDGE")
-        print(e.to, self.original_order[e.to])
-        print(e.frm, self.original_order[e.frm])
+        # print("EDGE")
+        # print(e.to, self.original_order[e.to])
+        # print(e.frm, self.original_order[e.frm])
         #Pour savoir si on fait passer la fleches a droite ou a gauche du pere de e
         if (all(elt.to.x < e.frm.x
                 for elt in e.frm.edges_to if elt.to is not e.to)
@@ -1162,30 +1162,30 @@ class Positioning(object):
                              if elt.to is not e.to) == e.frm.x))):
             #or e.frm.x > e.to.x):
             original_pos = ex_t - (e.posto * 2)
-            print("left")
+            # print("left")
         else:
             original_pos = ex_t + (e.posto * 2)
-            print("right")
+            # print("right")
 
         unused_range = [(int(b.x)-self.edge_dist, int(b.x + b.w)+self.edge_dist) for b in conflict_block]
         for b in self.original_order:
             if b is not (e.frm or e.to):
                 for tmp_e in b.edges_to:
-                    if self.original_order[e.frm] == 13 and self.original_order[e.to] == 15:
-                        print("XXXX")
-                        #     print(self.original_order)
-                        #     print("\n")
-                        #     print("XXXXX")
-                        #     print(e.frm)
-                        #     print(e.to)
-                        #     print("TMP")
-                        #     print(tmp_e.frm)
-                        #     print(tmp_e.to)
-                        #     print("Order")
-                        print(self.original_order[tmp_e.frm])
-                        print(self.original_order[tmp_e.to])
-                        #     print("Path")
-                        print(tmp_e.path)
+                    # if self.original_order[e.frm] == 13 and self.original_order[e.to] == 15:
+                    #     # print("XXXX")
+                    #     #     print(self.original_order)
+                    #     #     print("\n")
+                    #     #     print("XXXXX")
+                    #     #     print(e.frm)
+                    #     #     print(e.to)
+                    #     #     print("TMP")
+                    #     #     print(tmp_e.frm)
+                    #     #     print(tmp_e.to)
+                    #     #     print("Order")
+                    #     print(self.original_order[tmp_e.frm])
+                    #     print(self.original_order[tmp_e.to])
+                    #     #     print("Path")
+                    #     print(tmp_e.path)
                     if ((self.original_order[tmp_e.frm] >= self.original_order[e.frm]
                          and self.original_order[tmp_e.frm] <= self.original_order[e.to])
                         or (self.original_order[tmp_e.to] >= e.frm
@@ -1193,8 +1193,8 @@ class Positioning(object):
                         or (self.original_order[tmp_e.frm] <= self.original_order[e.frm]
                             and self.original_order[tmp_e.to] >= self.original_order[e.to])
                     ):
-                        if self.original_order[e.frm] == 13 and self.original_order[e.to] == 15:
-                            print("in")
+                        # if self.original_order[e.frm] == 13 and self.original_order[e.to] == 15:
+                        #    print("in")
                         unused_range.append((int(tmp_e.path[0][0]) - self.edge_dist, int(tmp_e.path[0][0]) + self.edge_dist))
                         unused_range.append((int(tmp_e.path[1][0]) - self.edge_dist, int(tmp_e.path[1][0]) + self.edge_dist))
                         # if tmp_e.path[0][0] < tmp_e.path[1][0]:
@@ -1208,37 +1208,37 @@ class Positioning(object):
                             # else:
                             #     unused_range.append((int(tmp_e.path[2][0])-self.edge_dist, int(tmp_e.path[1][0])+self.edge_dist))
 
-        print("YYYYY")
-        print(unused_range)
+        # print("YYYYY")
+        # print(unused_range)
         # print(e.to, e.frm)
         # print(original_pos)
         # Test si il y a un croisement
         if (self.test_elt_not_in_list_range(int(original_pos), unused_range)
             and self.test_elt_not_in_list_range(int(original_pos)+1,
                                                 unused_range)):
-            print(original_pos)
-            print("KK")
+            # print(original_pos)
+            # print("KK")
             return 0
 
         # Regarde s'il y a un espace entre ex_t et les block a gauche
         ex_t_int = int(ex_t)
         max_left = int(max(r[1] for r in unused_range))
         min_left = int(min(r[0] for r in unused_range))
-        print(ex_t_int)
-        print(max_left)
+        # print(ex_t_int)
+        # print(max_left)
         find = False
         newx = 0
-        print("Enter")
+        # print("Enter")
         for i in range(ex_t_int, max_left + 1):
             if self.test_elt_not_in_list_range(i, unused_range):
                 newx = i - ex_t
-                print("ok", i)
+                # print("ok", i)
                 break
         #for i in range(ex_t_int, min_left, -1):
         for i in range(min_left, ex_t_int):
             if self.test_elt_not_in_list_range(i, unused_range):
                 tmp_newx = i - ex_t
-                print("oki", i)
+                # print("oki", i)
                 if abs(newx) < abs(tmp_newx):
                     return newx
                 else:

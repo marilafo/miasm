@@ -1010,6 +1010,38 @@ class instruction(object):
         o += self.gen_args(args)
         return o
 
+    def set_regs_from_str(self, arg, replace, regs):
+        if arg.is_id():
+            rep = replace[arg]
+            if rep.is_slice():
+                regs[str(arg)] = str(rep.arg)
+            else:
+                regs[str(arg)] = str(arg)
+        elif arg.is_mem():
+            a = arg.ptr
+            self.set_regs_from_str(a, self.get_replace_regs(a) if a.is_id() else {}, regs)
+        elif arg.is_op():
+            list_args = arg.args
+            for l in list_args:
+                self.set_regs_from_str(l, self.get_replace_regs(l) if l.is_id() else {}, regs)
+
+    def to_graph_string(self, loc_db=None):
+        o = "%-10s " % self.name
+        args = []
+        regs = {}
+        replace = self.get_replace_regs()
+        for i, arg in enumerate(self.args):
+            if not isinstance(arg, m2_expr.Expr):
+                raise ValueError('zarb arg type')
+            self.set_regs_from_str(arg, replace, regs)
+            x = self.arg2str(arg, i, loc_db)
+            args.append(x)
+        o += self.gen_args(args)
+        return (o, regs)
+
+    def get_replace_regs(self):
+        return []
+
     def get_asm_offset(self, expr):
         return m2_expr.ExprInt(self.offset, expr.size)
 
