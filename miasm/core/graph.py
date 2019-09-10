@@ -4,10 +4,10 @@ from miasm.core.positioning import Positioning
 import xml.etree.ElementTree as ET
 import re
 
-text_size = 5
-text_space = text_size - 1
-text_line_space = 6
-color_loc = "#ff99cc"
+text_size = 6
+text_space = text_size-2
+text_line_space = text_size+1
+color_loc = "#34c9eb"
 #color_loc = "pink"
 color_str = "#000000"
 
@@ -292,16 +292,10 @@ class DiGraph(object):
                            **attr))
         )
 
-
     def box_positioning_svg(self, g):
-        # print("YPOOOOOO\n")
         g.clear()
-        #print("SVGGGG")
-        #print(self._head)
         for node in self.nodes():
             node_id = self.nodeid(node)
-            #print(node)
-            #print(type(node))
             # Compute size of the box:
             i = 0
             max_column = 0
@@ -316,7 +310,7 @@ class DiGraph(object):
                         if max_column < len(col.text) + tmp_column:
                             max_column = len(col.text) + tmp_column
                         tmp_column = 0
-                    if col.form == "code" or col.form == "loc":
+                    if col.form != "offset":
                         i = i + 1
 
             node_w = max_column * text_space + 5
@@ -336,34 +330,38 @@ class DiGraph(object):
         loc_text.set("id", "%s" % str(id))
         loc_text.set("font-size", str(text_size))
         loc_text.set("style",
-                     "font-family:'Courier New';"
+                     "font-family:'Monospace';"
                      "text-anchor:start;fill:%s" % color_str)
         if cl:
             loc_text.set("class", cl)
 
-    def format_text_str(self, str, regs, g_node, x, y, id):
+    def format_text_str(self, line, regs, g_node, x, y, id):
         if regs:
-            elt = regs.popitem()
-            t = str.split(elt[0])
-            tmp = 0
-            total_len = 0
-            if len(t) > 1:
-                for s in t:
-                    new_x = total_len * (text_space) + x
-                    total_len += len(" ".join(s.split()))
-                    self.format_text_str(s, regs.copy(), g_node, new_x, y, id)
-                    tmp += 1
-                    if tmp < len(t):
-                        loc_text = ET.SubElement(g_node, "text")
-                        new_x = total_len * (text_space) + x
-                        self.set_loc_text(loc_text, elt[0], new_x, y, id, elt[1])
-                        total_len += len(elt[0])
+            regs.sort()
+            elt = regs.pop()
+            if elt[0] not in line:
+                self.format_text_str(line, regs, g_node, x, y, id)
             else:
-                loc_text = ET.SubElement(g_node, "text")
-                self.set_loc_text(loc_text, str, x, y, id)
+                t = line.split(elt[0])
+                tmp = 0
+                total_len = 0
+                if len(t) > 1:
+                    for s in t:
+                        new_x = total_len * (text_space) + x
+                        total_len += len(" ".join(s.split()))
+                        self.format_text_str(s, list(regs), g_node, new_x, y, id)
+                        tmp += 1
+                        if tmp < len(t):
+                            loc_text = ET.SubElement(g_node, "text")
+                            new_x = total_len * (text_space) + x
+                            self.set_loc_text(loc_text, elt[0], new_x, y, id, elt[1])
+                            total_len += len(elt[0])
+                else:
+                    loc_text = ET.SubElement(g_node, "text")
+                    self.set_loc_text(loc_text, line, x, y, id)
         else:
             loc_text = ET.SubElement(g_node, "text")
-            self.set_loc_text(loc_text, str, x, y, id)
+            self.set_loc_text(loc_text, line, x, y, id)
 
     def svg(self):
         g_plac = Positioning("1")
@@ -423,32 +421,22 @@ class DiGraph(object):
                 if isinstance(lineDesc, self.DotCellDescription):
                     lineDesc = [lineDesc]
                 for col in lineDesc:
-                    #loc_text = ET.SubElement(g_node, "text")
-                    #loc_text.text = col.text
-
-                    # loc_text.text = str(self.nodeid(node))
                     if col.form == "loc":
                         p_node.set("id", "%s" % col.text)
-                    if col.form == "offset":
-                        #loc_text.set("x", "%s" % str(box_x + 10))
-                        my_x = box_x + 10
+                        my_x = box_x + 12
+                    elif col.form == "offset":
+                        my_x = box_x + 5
+                    elif col.form == "code_ir":
+                        my_x = box_x + 5
                     else:
-                        #loc_text.set("x", "%s" % str(box_x + 10 + 8 * text_space))
-                        my_x = box_x + 10 + 8 * text_space
-                    # loc_text.set("y", "%s" % str(box_y + text_line_space * (i+1)))
+                        my_x = box_x + 5 + 8 * text_space
                     my_y = box_y + text_line_space * (i+1)
-                    # loc_text.set("id", "%s" % i)
-                    # loc_text.set("font-size", str(text_size))
-                    # loc_text.set("style",
-                    #              "font-family:'Courier New';"
-                    #              "text-anchor:start;fill:%s" % color_str)
                     self.format_text_str(col.text, col.regs, g_node, my_x, my_y, i)
-                    if col.form == "code" or col.form == "loc":
+                    if col.form != "offset":
                         i = i + 1
 
             n = n + 1
-            # node_width = (2+max_column) * 8 + 15
-            # node_height = i*25 + 25
+
             node_rect = ET.SubElement(g, "rect")
             node_rect.set("id", "%s" % "rect"+str(node_id))
             node_rect.set("style",
@@ -471,17 +459,11 @@ class DiGraph(object):
                                                     str(box_x + box_w - 1),
                                                     str(box_y + 1)))
 
-            # svg["width"] = svg["width"] + node_width
-            # svg["height"] = svg["height"] + node_height
-            # svg["node"].append([node_id, node_width, node_height])
-        # print("\n\n\n")
-        # print("COUCOU\n\n\n")
         i = 1
         for src, dst in self.edges():
-            # print("Edges\n")
-            # print(src, dst)
+
             attrs = self.edge_attr(src, dst)
-            # print(attrs)
+
             g_edge = ET.SubElement(g, "g")
             g_edge.set("id", "edge%s%s" % (self.nodeid(src), self.nodeid(dst)))
             g_edge.set("class", "edge")
@@ -497,8 +479,6 @@ class DiGraph(object):
             arrow_edge.set("stroke-width", "1")
             e_path = g_plac.edges[self.nodeid(src), self.nodeid(dst)].path
 
-            # print("SVGGG")
-            # print(e_path)
             if len(e_path) == 3:
                 arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
                                                                       str(e_path[0][1]),
@@ -525,7 +505,6 @@ class DiGraph(object):
                                                                                   #str(e_path[2][1]),
                                                                                   str(e_path[2][0]),
                                                                                   str(e_path[2][1])))
-        
             # svg["edge"].extend([[i], self.nodeid(src), self.nodeid(dst)])
 
         s = g_plac.boundingbox()
@@ -536,10 +515,6 @@ class DiGraph(object):
         g.set("id", "loc?")
         g_title.set("id", "test")
         g_title.text = "asm_graph"
-        # p.set("points", "%s,%s %s,%s %s,%s %s,%s" %
-        #      (str(s[0]), str(s[1]), str(s[0]), str(s[3]),
-        #       str(s[2]), str(s[3]), str(s[2]), str(s[1])))
-        # p.set("id", "loc?")
 
         out = html_before
         out += ET.tostring(svg_xml)

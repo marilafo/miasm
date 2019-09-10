@@ -555,7 +555,7 @@ class AsmCFG(DiGraph):
                                             'colspan': 2,
                                             'bgcolor': 'grey'},
                                       form="loc",
-                                      regs={})
+                                      regs=[])
         block = self._loc_key_to_block.get(node, None)
         if block is None:
             return
@@ -566,19 +566,22 @@ class AsmCFG(DiGraph):
                                                block._errno
                     ),
                     attr={},
-                    form="unknow")
+                    form="unknow",
+                    regs=[]
+                )
             ]
             return
         for line in block.lines:
             if self._dot_offset:
                 t = line.to_graph_string(self.loc_db)
+
                 yield [self.DotCellDescription(text="%.8X" % line.offset,
-                                               attr={}, form="offset", regs={}),
+                                               attr={}, form="offset", regs=[]),
                        self.DotCellDescription(text=t[0],
                                                attr={}, form="code", regs=t[1])]
             else:
                 yield self.DotCellDescription(text=line.to_string(self.loc_db),
-                                              attr={}, form="unknow", regs={})
+                                              attr={}, form="unknow", regs=[])
 
     def node_attr(self, node):
         block = self._loc_key_to_block.get(node, None)

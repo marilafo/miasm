@@ -1014,9 +1014,9 @@ class instruction(object):
         if arg.is_id():
             rep = replace[arg]
             if rep.is_slice():
-                regs[str(arg)] = str(rep.arg)
+                regs.append((str(arg), str(rep.arg)))
             else:
-                regs[str(arg)] = str(arg)
+                regs.append((str(arg), str(arg)))
         elif arg.is_mem():
             a = arg.ptr
             self.set_regs_from_str(a, self.get_replace_regs(a) if a.is_id() else {}, regs)
@@ -1028,7 +1028,7 @@ class instruction(object):
     def to_graph_string(self, loc_db=None):
         o = "%-10s " % self.name
         args = []
-        regs = {}
+        regs = []
         replace = self.get_replace_regs()
         for i, arg in enumerate(self.args):
             if not isinstance(arg, m2_expr.Expr):
