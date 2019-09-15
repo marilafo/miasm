@@ -1253,57 +1253,57 @@ class Positioning(object):
             for elt in b.frm:
                 for e in elt.edges_to:
                     if self.original_order[e.to] == block_order and e.to != b:
-                        print("Never")
                         to_check.append(e)
 
             if len(b.edges_frm) < 2:
                 for e in b.edges_frm:
                     if e not in to_check:
-                        print("Je suis OK")
                         e.path[3] = e.path[2][1] - self.edge_dist*2
                     continue
-
-            # Take the left and the right edges_frm
-            # nb_left = sum(e.path[1][0] <= e.path[2][0] for e in to_check)
-
-            # # Add the edges from the same father with a block at the same level
-            # nb_right = sum(e.path[1][0] > e.path[2][0] for e in to_check)
-
-            # # Compute the available space
-
-            # print(self.original_order)
-            # print(b)
-            # print(block_order)
-
-            # if block_order != 0:
-            #     near_top_block = b.y - max(elt.y + elt.h
-            #                                for elt in self.original_order
-            #                                if (self.original_order[elt] ==
-            #                                    block_order - 1))
-            # else:
-            #     near_top_block = b.y - len(b.edges_frm) * self.edge_dist
-
-            # # near bottom block
-
-            # if nb_left > 0:
-            #     self.indent_left = near_top_block / (nb_left+1)
-
-            # if nb_right > 0:
-            #    self.indent_right = near_top_block / (nb_right+1)
+                
 
             self.indent_left = self.edge_dist
             self.indent_right = self.edge_dist
 
             for e in to_check:
-                print("COUCOU")
-                print(e)
-                print(e.path)
-                print(to_check)
+                if self.original_order[e.frm] >= self.original_order[e.to]:
+                    n_to = self.original_order[e.frm] + 1
+                    n_frm = self.original_order[e.to] - 1
+                    conflict_box = []
+                else:
+                    n_to = self.original_order[e.to]
+                    n_frm = self.original_order[e.frm]
+
+                    print(n_to)
+                    print(n_frm)
+                    # Prendre le min des blocs suivants
+                    
+                    conflict_box = [(int(elt.y),
+                                     int(elt.x) + self.block_dist,
+                                     int(elt.x + elt.y) + self.block_dist)
+                                    for elt in self.original_order
+                                    if (self.original_order[elt] > n_frm
+                                        and self.original_order[elt] < n_to
+                                        and elt != e.to and elt != e.frm)]
+
                 y0 = e.path[2][1]
                 if e.path[1][0] <= e.path[2][0]:
                     y0 = y0 - self.indent_left
                 else:
                     y0 = y0 - self.indent_right
+
+                print("Yo")
+                print(e.path)
+                print(conflict_box)
+
+                test_conflict= [elt[0] for elt in conflict_box
+                                if e.path[2][0] > elt[1]
+                                and e.path[2][0] < elt[2]]
+                if test_conflict:
+                    print("Conflict")
+                    y0 = min(test_conflict) - self.block_dist
+
+
                 y0 -= y0 % self.edge_dist
                 e.path[3] = y0
                 self.set_height(e.path)
@@ -1331,11 +1331,9 @@ class Positioning(object):
         y1 = path[3]
 
         if x0 > x1:
-            print("Right")
             y_used = self.y_used_right
             nb_used = self.indent_right
         else:
-            print("Left")
             y_used = self.y_used_left
             nb_used = self.indent_left
 
