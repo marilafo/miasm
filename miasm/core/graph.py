@@ -485,15 +485,13 @@ class DiGraph(object):
             arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
                                                                               str(e_path[0][1]),
                                                                               str(e_path[0][0]),
-                                                                              str(e_path[0][1] + 15),
+                                                                              str(e_path[1][1]),
                                                                               str(e_path[1][0]),
-                                                                              str(e_path[0][1] + 15) ,
+                                                                              str(e_path[1][1]),
                                                                               str(e_path[1][0]),
                                                                               str(e_path[3]),
-                                                                              #str(e_path[2][1]),
                                                                               str(e_path[2][0]),
                                                                               str(e_path[3]),
-                                                                              #str(e_path[2][1]),
                                                                               str(e_path[2][0]),
                                                                               str(e_path[2][1])))
             # if len(e_path) == 3:

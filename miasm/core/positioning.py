@@ -1103,6 +1103,10 @@ class Positioning(object):
                               and self.original_order[x] < n_to
                               and x != e.to and x != e.frm)]
 
+        if loop:
+            conflict_block.append(e.to)
+            conflict_block.append(e.frm)
+
         # Put all the conflict_block in the unused_range
         unused_range = [(int(b.x) - self.block_dist,
                          int(b.x + b.w)+self.block_dist)
@@ -1142,6 +1146,8 @@ class Positioning(object):
         if (self.test_elt_not_in_list_range(int(ex_t), unused_range)
             and self.test_elt_not_in_list_range(int(ex_t)+1,
                                                 unused_range)):
+            print(unused_range)
+            print(int(ex_t))
             return 0
 
         # Regarde s'il y a un espace entre ex_t et les block a gauche
@@ -1239,74 +1245,128 @@ class Positioning(object):
                     self.check_edge_frm(e, posfrm, config, simple)
                 posfrm += 1
 
-    def auto_check_edge_superposition(self):
-        self.y_used_left = {}
-        self.y_used_right = {}
-        # print(self.original_order)
+    def auto_set_y(self, top=True):
         for b in self.original_order:
-            # print(b)
-            block_order = self.original_order[b]
+            if top:
+                y0 = b.y + b.h + self.block_dist
 
-            # Edge arriving on the block
-            to_check = [e for e in b.edges_frm if len(b.edges_frm) >= 2]
-            # Edge from the same father but with a son at the same order
-            for elt in b.frm:
-                for e in elt.edges_to:
-                    if self.original_order[e.to] == block_order and e.to != b:
-                        to_check.append(e)
+                # Regle le probleme des blocks sur le meme level
+                for block in self.original_order:
+                    if self.original_order[b] == self.original_order[block]:
+                        for e1 in b.edges_to:
+                            for e2 in block.edges_to:
+                                if e1.to == e2.to:
+                                    if b.x < block.x and b.x < e1.to.x:
+                                        y0 = y0 + ((len(block.edges_to)+1)
+                                                   * self.edge_dist)
+                                    elif b.x > block.x and b.x >= e1.to.x:
+                                        y0 = y0 + ((len(block.edges_to)+1)
+                                                   * self.edge_dist)
 
-            if len(b.edges_frm) < 2:
-                for e in b.edges_frm:
-                    if e not in to_check:
-                        e.path[3] = e.path[2][1] - self.edge_dist*2
-                    continue
-                
+                edges_left = [e for e in b.edges_to
+                              if e.path[1][0] < e.path[0][0]]
+                edges_right = [e for e in b.edges_to
+                               if e.path[1][0] >= e.path[0][0]]
+                # Devide the edges from left and right edges
+                edges_left.sort(key=lambda e: (e.path[0][0]))
+                edges_right.sort(key=lambda e: (e.path[0][0]), reverse=True)
+            else:
+                y0 = b.y - self.block_dist
+                edges_left = [e for e in b.edges_frm
+                              if e.path[2][0] < e.path[1][0]]
+                edges_right = [e for e in b.edges_frm
+                               if e.path[2][0] >= e.path[1][0]]
+                # Devide the edges from left and right edges
+                edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
+                edges_right.sort(key=lambda e: (e.path[2][0]))
 
-            self.indent_left = self.edge_dist
-            self.indent_right = self.edge_dist
-
-            for e in to_check:
-                if self.original_order[e.frm] >= self.original_order[e.to]:
-                    n_to = self.original_order[e.frm] + 1
-                    n_frm = self.original_order[e.to] - 1
-                    conflict_box = []
+            # Place the first part of the edges
+            y_tmp = y0
+            for e in edges_left:
+                if top:
+                    e.path[1][1] = y_tmp
+                    y_tmp += self.edge_dist
                 else:
-                    n_to = self.original_order[e.to]
-                    n_frm = self.original_order[e.frm]
-
-                    print(n_to)
-                    print(n_frm)
-                    # Prendre le min des blocs suivants
-                    
-                    conflict_box = [(int(elt.y),
-                                     int(elt.x) + self.block_dist,
-                                     int(elt.x + elt.y) + self.block_dist)
-                                    for elt in self.original_order
-                                    if (self.original_order[elt] > n_frm
-                                        and self.original_order[elt] < n_to
-                                        and elt != e.to and elt != e.frm)]
-
-                y0 = e.path[2][1]
-                if e.path[1][0] <= e.path[2][0]:
-                    y0 = y0 - self.indent_left
+                    e.path[3] = y_tmp
+                    y_tmp -= self.edge_dist
+            y_tmp = y0
+            for e in edges_right:
+                if top:
+                    if e.path[0][0] == e.path[1][0]:
+                        e.path[3] = y_tmp
+                    else:
+                        e.path[1][1] = y_tmp
+                    y_tmp += self.edge_dist
                 else:
-                    y0 = y0 - self.indent_right
+                    if e.path[0][0] != e.path[1][0]:
+                        e.path[3] = y_tmp
+                        y_tmp -= self.edge_dist
 
-                print("Yo")
-                print(e.path)
-                print(conflict_box)
+    # def auto_check_edge_superposition(self):
+    #     self.y_used_left = {}
+    #     self.y_used_right = {}
+    #     # print(self.original_order)
+    #     for b in self.original_order:
+    #         # print(b)
+    #         block_order = self.original_order[b]
 
-                test_conflict= [elt[0] for elt in conflict_box
-                                if e.path[2][0] > elt[1]
-                                and e.path[2][0] < elt[2]]
-                if test_conflict:
-                    print("Conflict")
-                    y0 = min(test_conflict) - self.block_dist
+    #         # Edge arriving on the block
+    #         to_check = [e for e in b.edges_frm if len(b.edges_frm) >= 2]
+    #         # Edge with siblinks
+    #         for elt in b.frm:
+    #             for e in elt.edges_to:
+    #                 if self.original_order[e.to] == block_order and e.to != b:
+    #                     to_check.append(e)
 
+    #         if len(b.edges_frm) < 2:
+    #             for e in b.edges_frm:
+    #                 if e not in to_check:
+    #                     e.path[3] = e.path[2][1] - self.edge_dist*2
+    #                 continue
 
-                y0 -= y0 % self.edge_dist
-                e.path[3] = y0
-                self.set_height(e.path)
+    #         self.indent_left = self.edge_dist
+    #         self.indent_right = self.edge_dist
+
+    #         for e in to_check:
+    #             if self.original_order[e.frm] >= self.original_order[e.to]:
+    #                 n_to = self.original_order[e.frm] + 1
+    #                 n_frm = self.original_order[e.to] - 1
+    #                 conflict_box = []
+    #             else:
+    #                 n_to = self.original_order[e.to]
+    #                 n_frm = self.original_order[e.frm]
+
+    #                 print(n_to)
+    #                 print(n_frm)
+    #                 # Prendre le min des blocs suivants
+    #                 conflict_box = [(int(elt.y),
+    #                                  int(elt.x) + self.block_dist,
+    #                                  int(elt.x + elt.y) + self.block_dist)
+    #                                 for elt in self.original_order
+    #                                 if (self.original_order[elt] > n_frm
+    #                                     and self.original_order[elt] < n_to
+    #                                     and elt != e.to and elt != e.frm)]
+
+    #             y0 = e.path[2][1]
+    #             if e.path[1][0] <= e.path[2][0]:
+    #                 y0 = y0 - self.indent_left
+    #             else:
+    #                 y0 = y0 - self.indent_right
+
+    #             print("Yo")
+    #             print(e.path)
+    #             print(conflict_box)
+
+    #             test_conflict = [elt[0] for elt in conflict_box
+    #                              if e.path[2][0] > elt[1]
+    #                              and e.path[2][0] < elt[2]]
+    #             if test_conflict:
+    #                 print("Conflict")
+    #                 y0 = min(test_conflict) - self.block_dist
+
+    #             y0 -= y0 % self.edge_dist
+    #             e.path[3] = y0
+    #             self.set_height(e.path)
 
     def auto_arrange_edges(self):
         # Set src and dest for all edges
@@ -1320,10 +1380,12 @@ class Positioning(object):
         # Replace les edges à la sortie des boîtes pour ne
         # pas avoir de croisements
         self.auto_fix_pos_edge(cross_edge=True)
-
+        # The 2 previous func deal with x now deal with y
         # Permet aux fleches qui arrivent sur une même box de ne
         # pas se surperposer
-        self.auto_check_edge_superposition()
+        self.auto_set_y()
+        self.auto_set_y(top=False)
+        # self.auto_check_edge_superposition()
 
     def set_height(self, path):
         x0 = path[1][0]
