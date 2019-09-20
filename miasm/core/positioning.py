@@ -1245,9 +1245,84 @@ class Positioning(object):
                     self.check_edge_frm(e, posfrm, config, simple)
                 posfrm += 1
 
+    def auto_set_y_top(self):
+        max_order = max(self.original_order.values())
+        for i in range(max_order+1):
+            current = []
+            for b in self.original_order:
+                if self.original_order[b] == i:
+                    # Devide the edges from left and right edges
+                    edges_left = [e for e in b.edges_to
+                                  if e.path[1][0] < e.path[0][0]]
+                    edges_right = [e for e in b.edges_to
+                                   if e.path[1][0] >= e.path[0][0]]
+
+                    edges_left.sort(key=lambda e: (e.path[0][0]))
+                    edges_right.sort(key=lambda e: (e.path[0][0]),
+                                     reverse=True)
+
+                    current.append([b, edges_left, edges_right])
+            current.sort(key=lambda elt: (elt[0].x), reverse=True)
+            # Set edges at the border of the block
+            max_block_left = current[-1][0].y + current[-1][0].h + self.block_dist
+            max_block_right = current[0][0].y + current[0][0].h + self.block_dist
+            y0_left = self.set_edges_y(current[-1][1], max_block_left)
+            y0_right = self.set_edges_y(current[0][2], max_block_right)
+
+            for j in range(1, len(current)):
+                max_block_right = max(y0_right,
+                                      current[j][0].y + current[j][0].h)
+                y0_right = self.set_edges_y(current[j][2], max_block_right)
+            current.reverse()
+            y0_left = max(y0_right, y0_left)
+            for i in range(1, len(current)):
+                max_block_left = max(y0_left,
+                                     current[j][0].y + current[j][0].h)
+                y0_left = self.set_edges_y(current[j][1], max_block_left)
+
+    # Set the edges elt[block, edges_left, edges_right]
+    def set_edges_y(self, edges, y):
+        # TODO rajouter test block sur le chemin
+        y_tmp = y
+        for e in edges:
+            if e.path[0][0] == e.path[1][0]:
+                e.path[3] = y_tmp
+            else:
+                e.path[1][1] = y_tmp
+            y_tmp += self.edge_dist
+        return y_tmp
+
+    def auto_set_y_bottom(self):
+        for b in self.original_order:
+            print("Bottom")
+            y0 = b.y - self.block_dist
+            edges_left = [e for e in b.edges_frm
+                          if e.path[2][0] < e.path[1][0]]
+            edges_right = [e for e in b.edges_frm
+                           if e.path[2][0] >= e.path[1][0]]
+            # Devide the edges from left and right edges
+            edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
+            edges_right.sort(key=lambda e: (e.path[2][0]))
+
+            y_tmp = y0
+            for e in edges_left:
+                print(e.path)
+                if e.path[0][0] != e.path[1][0]:
+                    e.path[3] = y_tmp
+                    y_tmp -= self.edge_dist
+            y_tmp = y0
+            for e in edges_right:
+                print(e.path)
+                if e.path[0][0] != e.path[1][0]:
+                    e.path[3] = y_tmp
+                    y_tmp -= self.edge_dist
+
+
     def auto_set_y(self, top=True):
+        print("SET_Y")
         for b in self.original_order:
             if top:
+                print("Top")
                 y0 = b.y + b.h + self.block_dist
 
                 # Regle le probleme des blocks sur le meme level
@@ -1271,6 +1346,7 @@ class Positioning(object):
                 edges_left.sort(key=lambda e: (e.path[0][0]))
                 edges_right.sort(key=lambda e: (e.path[0][0]), reverse=True)
             else:
+                print("Bottom")
                 y0 = b.y - self.block_dist
                 edges_left = [e for e in b.edges_frm
                               if e.path[2][0] < e.path[1][0]]
@@ -1280,17 +1356,20 @@ class Positioning(object):
                 edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
                 edges_right.sort(key=lambda e: (e.path[2][0]))
 
+            print(y0)
             # Place the first part of the edges
             y_tmp = y0
             for e in edges_left:
+                print(e.path)
                 if top:
                     e.path[1][1] = y_tmp
                     y_tmp += self.edge_dist
-                else:
+                elif e.path[0][0] != e.path[1][0]:
                     e.path[3] = y_tmp
                     y_tmp -= self.edge_dist
             y_tmp = y0
             for e in edges_right:
+                print(e.path)
                 if top:
                     if e.path[0][0] == e.path[1][0]:
                         e.path[3] = y_tmp
@@ -1383,8 +1462,8 @@ class Positioning(object):
         # The 2 previous func deal with x now deal with y
         # Permet aux fleches qui arrivent sur une même box de ne
         # pas se surperposer
-        self.auto_set_y()
-        self.auto_set_y(top=False)
+        self.auto_set_y_top()
+        self.auto_set_y_bottom()
         # self.auto_check_edge_superposition()
 
     def set_height(self, path):
