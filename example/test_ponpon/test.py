@@ -20,8 +20,8 @@ def print_svg(nodes, edges):
 
     svg_xml = ET.Element("svg")
     svg_xml.set("xmlns:svg", "http://www.w3.org/2000/svg")
-    svg_xml.set("xmlns", "http://www.w3.org/2000/svg")
     svg_xml.set("version", "1.1")
+
     g = ET.SubElement(svg_xml, "g")
     g.set("class", "graph")
     g_title = ET.SubElement(g, "title")
@@ -68,16 +68,19 @@ def print_svg(nodes, edges):
         node_rect.set("height", "%s" % str(box_h))
         node_rect.set("x", "%s" % str(box_x))  # Place
         node_rect.set("y", "%s" % str(box_y))  # Place
+
         node_rect.set("ry", "%s" % str(7))
+        print("Node")
+        print(box_x, box_y, box_w, box_h)
         p_node.set("points",
-                   "%s,%s %s,%s %s,%s %s,%s" % (str(box_x + 5),
-                                                str(box_y + 5),
-                                                str(box_x + 5),
-                                                str(box_y + 30),
-                                                str(box_x + box_w - 5),
-                                                str(box_y + 30),
-                                                str(box_x + box_w - 5),
-                                                str(box_y + 5)))
+                   "%s,%s %s,%s %s,%s %s,%s" % (str(box_x),
+                                                str(box_y),
+                                                str(box_x),
+                                                str(box_y + box_h),
+                                                str(box_x + box_w),
+                                                str(box_y + box_h),
+                                                str(box_x + box_w),
+                                                str(box_y)))
 
     for e in edges:
         src = e[0]
@@ -85,8 +88,8 @@ def print_svg(nodes, edges):
         e_path = g_plac.edges[(src, dst)].path
         if len(e_path) < 2:
             continue
-        print("EEEDDDDDGGGGEEEE")
-        print(e_path)
+        #print("EEEDDDDDGGGGEEEE")
+        #print(e_path)
         g_edge = ET.SubElement(g, "g")
         g_edge.set("id", "edge%s%s" % (str(src), str(dst)))
         g_edge.set("class", "edge")
@@ -101,65 +104,19 @@ def print_svg(nodes, edges):
         arrow_edge.set("stroke",  "%s" % "blue")
         arrow_edge.set("stroke-width", "3")
 
-        # arrow_edge.set("points", "%s,%s %s,%s %s,%s"
-        # % ("0", "0", "10", "0", "5", "10"))
-        # arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-        #                                                       str(e_path[0][1]),
-        #                                                       str(e_path[0][0]),
-        #                                                       str(e_path[1][1]-10),
-        #                                                       str(e_path[1][0]),
-        #                                                       str(e_path[1][1]-10),
-        #                                                       str(e_path[1][0]),
-        #                                                       str(e_path[1][1])))
-        # svg["edge"].extend([[i], self.nodeid(src), self.nodeid(dst)])
-        # print(e_path)
+        arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
+                                                                          str(e_path[0][1]),
+                                                                          str(e_path[0][0]),
+                                                                          str(e_path[1][1]),
+                                                                          str(e_path[1][0]),
+                                                                          str(e_path[1][1]),
+                                                                          str(e_path[1][0]),
+                                                                          str(e_path[3]),
+                                                                          str(e_path[2][0]),
+                                                                          str(e_path[3]),
+                                                                          str(e_path[2][0]),
+                                                                          str(e_path[2][1])))
 
-        if len(e_path) == 2:
-            print("ERROOR")
-
-
-        if len(e_path) == 3:
-            arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-                                                                  str(e_path[0][1]),
-                                                                  str(e_path[0][0]),
-                                                                  str(e_path[2][1]),
-                                                                  #str(e_path[1][1] - 10), 
-                                                                  str(e_path[1][0]),
-                                                                  str(e_path[2][1]),
-                                                                  #str(e_path[1][1] - 10),
-                                                                  str(e_path[1][0]),
-                                                                  str(e_path[1][1])))
-        elif len(e_path) == 4:
-            arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-                                                                              str(e_path[0][1]),
-                                                                              str(e_path[0][0]),
-                                                                              str(e_path[0][1]+15),
-                                                                              str(e_path[1][0]),
-                                                                              str(e_path[0][1] +15),
-                                                                              str(e_path[1][0]),
-                                                                              str(e_path[3][1]),
-                                                                              #str(e_path[2][1]),
-                                                                              str(e_path[2][0]),
-                                                                              str(e_path[3][1]),
-                                                                              #str(e_path[2][1]),
-                                                                              str(e_path[2][0]),
-                                                                              str(e_path[2][1])))
-            # print("CACAO")
-            # print("%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-            #                                                str(e_path[0][1]),
-            #                                                str(e_path[0][0]),
-            #                                                str(e_path[0][1]+15),
-            #                                                str(e_path[1][0]),
-            #                                                str(e_path[0][1] +15),
-            #                                                str(e_path[1][0]),
-            #                                                str(e_path[3]),
-            #                                                #str(e_path[2][1]),
-            #                                                str(e_path[2][0]),
-            #                                                str(e_path[3]),
-            #                                                #str(e_path[2][1]),
-            #                                                str(e_path[2][0]),
-            #                                                str(e_path[2][1])))
-            
     s = g_plac.boundingbox()
 
     svg_xml.set("width", "%spt" % str((s[2] - s[0]) * 2 + 50))
@@ -248,6 +205,14 @@ list_test = [
     [[0, 1, 2, 3, 4, 5],
      [[0, 1], [1, 2], [1, 3], [1, 4], [2, 1], [3, 1], [4, 1], [2, 5], [4, 5]]
     ],
+    #22
+    [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+     [[0,1],[0,6],[0,7],[1,2],[1,3],[1,4],[2,11],[3,5],[4,11],[5,11],[6,10],[7,8],[7,9],[8,9],[9,10],[11,10]]
+    ],
+    #23 caf0
+    [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+     [[0,1],[0,2],[1,2],[1,12],[2,3],[2,4],[3,5],[3,7],[4,6],[4,10],[5,7],[5,8],[6,9],[6,10],[7,11],[8,9],[9,10],[10,11],[11,12]]
+    ],
 ]
 
 
@@ -272,5 +237,6 @@ test(-1)
 #test(9)
 #test(10)
 #test(14)
+#test(15)
 #test(17)
 #test(18)

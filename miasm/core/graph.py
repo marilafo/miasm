@@ -478,10 +478,10 @@ class DiGraph(object):
             arrow_edge.set("stroke",  "%s" % str(attrs['color']))
             arrow_edge.set("stroke-width", "1")
             e_path = g_plac.edges[self.nodeid(src), self.nodeid(dst)].path
-            print("Edge")
-            print(src, dst)
-            print(e_path)
-            print("\n")
+            # print("Edge")
+            # print(src, dst)
+            # print(e_path)
+            # print("\n")
             arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
                                                                               str(e_path[0][1]),
                                                                               str(e_path[0][0]),

@@ -1,10 +1,17 @@
 from future.utils import viewvalues
+import logging
 
+log = logging.getLogger("Postionning")
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter("%(levelname)-5s: %(message)s"))
+log.addHandler(console_handler)
+log.setLevel(logging.DEBUG)
 
 class Positioning(object):
     groups = []
-    edge_dist = 5
-    block_dist = 10
+    edge_dist = 3
+    block_dist = 5
+    inter_block = 30
 
     class Box(object):
 
@@ -106,6 +113,13 @@ class Positioning(object):
         return[minx_b, miny_b, maxx_b, maxy_b]
 
     def pattern_col(self, groups):
+        print("Pattern col")
+        for g in groups:
+            print(g, g.to, g.frm, g.content, g.x, g.y, g.w, g.h)
+            print([elt.x for elt in g.content])
+            print([elt.y for elt in g.content])
+            print([elt.w for elt in g.content])
+            print([elt.h for elt in g.content])
         try:
             head = next(g for g in groups if len(g.to) == 1
                         and len(next(iter(g.to)).frm) == 1
@@ -223,12 +237,15 @@ class Positioning(object):
         return True
 
     def merge_pattern_column(self, ar):
+        print("column")
+        print(ar)
         for i in range(0, len(ar) - 1):
             g = ar[i]
             gn = ar[i+1]
             withchld = [b for b in g.content if b.to]
             if not withchld:
                 continue
+            # Allow to center a father if his sons are in the next block
             wc = withchld[0]
             if (
                     len(withchld) == 1
@@ -254,11 +271,19 @@ class Positioning(object):
         # moves boxes inside this group
         maxw = max(g.w for g in ar)
         fullh = sum(g.h for g in ar)
+        print("XXX")
+        for g in ar:
+            print(g, g.h)
         cury = -fullh/2
         for g in ar:
             dy = cury - g.y
+            print(cury)
+            print(fullh)
+            print(dy)
             for b in g.content:
+                print("Coucou1 ", b.y)
                 b.y += dy
+                print("Coucou2 ", b.y)
             cury += g.h
 
         # create remplacement group
@@ -294,22 +319,27 @@ class Positioning(object):
     # OK
     # a -> [b, c, d] -> e
     def merge_pattern_line(self, ar):
-        for g in ar:
-            self.group_remove_hz_margin(g)
+        print("line")
+        print(ar)
+        #for g in ar:
+        #    self.group_remove_hz_margin(g)
 
         # move boxes inside this group
         # ar = ar.sort_by { |g| -g.h }
         maxh = max(g.h for g in ar)
         fullw = sum(g.w for g in ar)
         curx = -fullw/2
+        print(maxh)
+        print(fullw)
         for g in ar:
             # if no to, put all boxes at bottom ; if no frm, put them at top
-            if len(g.frm) == 1 and len(g.to) == 0:
-                dy = (g.h - maxh)/2
-            elif len(g.frm) == 0 and len(g.to) == 1:
-                dy = (maxh - g.h)/2
-            else:
-                dy = 0
+            # if len(g.frm) == 1 and len(g.to) == 0:
+            #     dy = (g.h - maxh)/2
+            # elif len(g.frm) == 0 and len(g.to) == 1:
+            #     dy = (maxh - g.h)/2
+            # else:
+            #     dy = 0
+            dy = (g.h - maxh)/2
 
             dx = curx - g.x
             for b in g.content:
@@ -318,58 +348,58 @@ class Positioning(object):
             curx += g.w
 
         # shrink horizontally if possible
-        for i in range(len(ar) - 1):
-            g1 = ar[i]
-            g2 = ar[i + 1]
-            if (not g1.content) or (not g2.content):
-                # only work with full groups, dont try to interleave gaps see
-                # if all of one's boxes can be slightly moved inside the other
-                g1ymin = min(b.y - 9 for b in g1.content)
-                g1ymax = max(b.y + b.h + 9 for b in g1.content)
-                g2ymin = min(b.y - 9 for b in g1.content)
-                g2ymax = max(b.y + b.h + 9 for b in g1.content)
-                g1_matchg2 = [b for b in g1.content if (b.y + b.h > g2ymin and
-                                                        b.y < g2ymax)]
-                g2_matchg1 = [b for b in g2.content if (b.y + b.h > g1ymin and
-                                                        b.y < g1ymax)]
-                if len(g1_matchg2) > 0 and len(g2_matchg1) > 0:
-                    g1_up = [b for b in g1.content if b.y + b.h < g2ymin]
-                    g1_down = [b for b in g1.content if b.y > g2ymax]
-                    g2_up = [b for b in g2.content if b.y + b.h < g1ymin]
-                    g2_down = [b for b in g2.content if b.y > g1ymax]
-                    # avoid moving into an arrow
-                    xmin = max(b.x + b.w + 8 for b in g1_matchg2)
-                    xmax = min(b.x - 8 for b in g2_matchg1)
+        # for i in range(len(ar) - 1):
+        #     g1 = ar[i]
+        #     g2 = ar[i + 1]
+        #     if (not g1.content) or (not g2.content):
+        #         # only work with full groups, dont try to interleave gaps see
+        #         # if all of one's boxes can be slightly moved inside the other
+        #         g1ymin = min(b.y - 9 for b in g1.content)
+        #         g1ymax = max(b.y + b.h + 9 for b in g1.content)
+        #         g2ymin = min(b.y - 9 for b in g1.content)
+        #         g2ymax = max(b.y + b.h + 9 for b in g1.content)
+        #         g1_matchg2 = [b for b in g1.content if (b.y + b.h > g2ymin and
+        #                                                 b.y < g2ymax)]
+        #         g2_matchg1 = [b for b in g2.content if (b.y + b.h > g1ymin and
+        #                                                 b.y < g1ymax)]
+        #         if len(g1_matchg2) > 0 and len(g2_matchg1) > 0:
+        #             g1_up = [b for b in g1.content if b.y + b.h < g2ymin]
+        #             g1_down = [b for b in g1.content if b.y > g2ymax]
+        #             g2_up = [b for b in g2.content if b.y + b.h < g1ymin]
+        #             g2_down = [b for b in g2.content if b.y > g1ymax]
+        #             # avoid moving into an arrow
+        #             xmin = max(b.x + b.w + 8 for b in g1_matchg2)
+        #             xmax = min(b.x - 8 for b in g2_matchg1)
 
-                    if len(g1_up) > 0 and len(g1.down) > 0:
-                        xmin = max([xmin].extend((max([b.x + b.w/2 + 8
-                                                       for b in g1_up]),
-                                                  max([b.x + b.w/2 + 8
-                                                       for b in g1_down]))))
+        #             if len(g1_up) > 0 and len(g1.down) > 0:
+        #                 xmin = max([xmin].extend((max([b.x + b.w/2 + 8
+        #                                                for b in g1_up]),
+        #                                           max([b.x + b.w/2 + 8
+        #                                                for b in g1_down]))))
 
-                    if len(g2_up) > 0 and len(g2.down) > 0:
-                        xmax = min([xmax].extend((min([b.x + b.w/2 + 8
-                                                       for b in g2_up]),
-                                                  min([b.x + b.w/2 + 8 for
-                                                       b in g2_down]))))
-                    dx = xmax - xmin
-                    if dx > 0:
-                        for j in len(ar):
-                            for b in ar[j]:
-                                if i >= j:
-                                    b.x += dx/2
-                                else:
-                                    b.x += -dx/2
+        #             if len(g2_up) > 0 and len(g2.down) > 0:
+        #                 xmax = min([xmax].extend((min([b.x + b.w/2 + 8
+        #                                                for b in g2_up]),
+        #                                           min([b.x + b.w/2 + 8 for
+        #                                                b in g2_down]))))
+        #             dx = xmax - xmin
+        #             if dx > 0:
+        #                 for j in len(ar):
+        #                     for b in ar[j]:
+        #                         if i >= j:
+        #                             b.x += dx/2
+        #                         else:
+        #                             b.x += -dx/2
 
         # add a 'margin-top' proportionnal to the ar width
         # this gap should be relative to the real boxes and not possible
         # previous gaps when merging lines (eg long line + many
         # if patterns -> dont duplicate gaps)
-        boxen = [y for x in [g.content for g in ar] for y in x]
-        fullw = max(g.x + g.w + 8 for g in boxen) - min(g.x - 8 for g in boxen)
-        realh = max(g.y + g.h for g in boxen) - min(g.y for g in boxen)
-        if maxh < realh + fullw/4:
-            maxh = realh + fullw/4
+        #boxen = [y for x in [g.content for g in ar] for y in x]
+        #fullw = max(g.x + g.w for g in boxen) - min(g.x for g in boxen)
+        #realh = max(g.y + g.h for g in boxen) - min(g.y for g in boxen)
+        #if maxh < realh + fullw/4:
+        #    maxh = realh + fullw/4
 
         # create remplacement group
         newg = self.Box(None, [y for x in [g.content for g in ar] for y in x])
@@ -385,6 +415,8 @@ class Positioning(object):
     # OK
     # a -> b -> c & a -> c
     def merge_pattern_ifend(self, head):
+        print("ifend")
+        print(head)
         head_to = list(head.to)
         if head_to[1] in head_to[0].to:
             ten = head_to[0]
@@ -422,6 +454,8 @@ class Positioning(object):
         return ten
 
     def merge_pattern_n_ifend(self, list_head, ten):
+        print("n ifend")
+        print(list_head)
         last_son = list_head[len(list_head) - 1]
         for head in list_head:
             if head is not last_son:
@@ -561,10 +595,12 @@ class Positioning(object):
             print("end")
 
     def pattern_layout_complex(self, groups):
+        print("complex")
         order = self.order_graph(groups)
 
         uniq = None
         groups.sort(key=lambda x: (order[x]))
+
         for g in groups:
             if len(g.to) <= 1:
                 continue
@@ -574,12 +610,10 @@ class Positioning(object):
                 reach.append(self.list_reachable(t))
             uniq = []
             for i in range(len(reach)):
-                # take all nodes reachable frmom there ...
-                # u = copy(reach[i])
-                u = dict(reach[i])
+                # take all nodes reachable from there ...
+                u = list(reach[i])
                 uniq.append(u)
-                # ignore previous layout_complex artifacts
-                # u.delete_if { |k, v| k.content.empty? } #TOCHECK
+                # delete previous node create for complex purpose
                 for j in list(u):
                     if not j.content:
                         del u[j]
@@ -587,15 +621,18 @@ class Positioning(object):
                 for ii in range(len(reach)):
                     if i == ii:
                         continue
-                    # ... and delete nodes reachable frmom anywhere else
+                    # ... and delete nodes reachable from anywhere else
                     for l in reach[ii]:
-                        if u.get(l):
-                            del u[l]
+                        if l in u:
+                            u.remove(l)
+
             for u in list(uniq):
                 if len(u) <= 1:
                     uniq.remove(u)
 
             if uniq:
+                log.debug("Uniq not tested for now")
+                fds
                 # now layout every uniq subgroup independently
                 for u in uniq:
                     subgroups = [g for g in groups if u.get(g)]
@@ -672,6 +709,7 @@ class Positioning(object):
                         newg.to.add(t)
 
                 return True
+
         return False
 
     # OK
@@ -691,13 +729,13 @@ class Positioning(object):
     # OK
     # returns a hash with true for every node reachable frmom src (included)
     def list_reachable(self, src):
-        done = {}
+        done = []
         todo = set([src])
         while todo:
             g = todo.pop()
-            if done.get(g):
+            if g in done:
                 continue
-            done[g] = True
+            done.append(g)
             todo = todo.update(g.to)
         return done
 
@@ -721,10 +759,10 @@ class Positioning(object):
     def create_layers(self, groups, order):
         def newemptybox(groups):
             b = self.Box(None, [])
-            b.x = -8
-            b.y = -9
-            b.w = 16
-            b.h = 18
+            b.x = -1
+            b.y = -1
+            b.w = 2
+            b.h = 2
             groups.append(b)
             return b
 
@@ -778,28 +816,32 @@ class Positioning(object):
     # take all groups, order them by order, layout as layers
     # always return a single group holding everything
     def layout_layers(self, groups):
+        print("layout layer")
         order = self.order_graph(groups)
+        print(order)
         # already a tree
         layers = self.create_layers(groups, order)
+
         if not layers:
             return False
 
-        for l in layers:
-            if l:
-                for g in l:
-                    self.group_remove_hz_margin(g)
+        # for l in layers:
+        #     if l:
+        #         for g in l:
+        #             self.group_remove_hz_margin(g)
 
         # widest layer width
         maxlw = max([sum(g.w for g in l) for l in layers if l])
 
         # center the 1st layer boxes on a segment that large
-        x0 = maxlw/2.0
+        x0 = -maxlw/2.0
         curlw = sum(g.w for g in layers[0])
-        dx0 = (maxlw - curlw) / (2.0*len(layers[0]))
+        #dx0 = (maxlw - curlw) / (2.0*len(layers[0]))
+        dx0 = (maxlw - curlw) / 2.0
+        x0 += dx0
         for g in layers[0]:
-            x0 += dx0
             g.x = x0
-            x0 += g.w + dx0
+            x0 += g.w
 
         # at this point, the goal is to reorder the most populated layer
         # the best we can, and move other layers' boxes accordingly
@@ -809,7 +851,7 @@ class Positioning(object):
             i = 0
             res = []
             for g in layers[l]:
-                # we know g.frmom is not empty (g would be in @layer[0])
+                # we know g.from is not empty (g would be in @layer[0])
                 # medfrm = (reduce(lambda a, b: a + b,
                 # ((gg.x + gg.w)/2.0 for gg in g.frm)) / len(g.frm))
                 tmp = 0
@@ -823,13 +865,14 @@ class Positioning(object):
 
             # now they are reordered, update their #x accordingly
             # evenly distribute them in the layer
-            x0 = maxlw/2.0
+            x0 = -maxlw/2.0
             curlw = sum(g.w for g in layers[l])
-            dx0 = (maxlw - curlw) / (2.0*len(layers[l]))
+            #dx0 = (maxlw - curlw) / (2.0*len(layers[l]))
+            dx0 = (maxlw - curlw) / 2.0
+            x0 += dx0
             for g in layers[l]:
-                x0 += dx0
                 g.x = x0
-                x0 += g.w + dx0
+                x0 += g.w
 
         # for l in range(0, len(layers)):
         for l in range(len(layers) - 1, -1, -1):
@@ -853,17 +896,18 @@ class Positioning(object):
             layers[l] = [elt[0] for elt in res]
 
             # now they are reordered, update their #x accordingly
-            x0 = maxlw/2.0
+            x0 = -maxlw/2.0
             curlw = sum(g.w for g in layers[l])
-            dx0 = (maxlw - curlw) / (2.0*len(layers[l]))
+            dx0 = (maxlw - curlw) / 2.0
+            x0 += dx0
             for g in layers[l]:
-                x0 += dx0
                 g.x = x0
-                x0 += g.w + dx0
-
+                x0 += g.w
         # now the boxes are (hopefully) sorted correctly position them
         # according to their ties with prev/next layer from the maxw layer
         # (positionning = packed), propagate adjacent layers positions
+
+        # We look for the id of the larger layer
         try:
             maxidx = next(i for i in range(0, len(layers))
                           if (sum(g.w for g in layers[i]) == maxlw))
@@ -880,6 +924,7 @@ class Positioning(object):
         layerbox_tmp = {}
         for i in ilist:
             layer = layers[i]
+            miny = min(g.y for g in layer if g.content)
             curlw = sum(g.w for g in layer)
             # left/rightmost acceptable position for the
             # current box w/o overflowing on the right side
@@ -892,40 +937,60 @@ class Positioning(object):
                 layerbox_tmp[i].append(newg)
             else:
                 layerbox_tmp[i] = newg
-            newg.w = maxlw
+            #newg.w = maxlw
+            newg.w = curlw
             newg.h = max(g.h for g in layer)
             newg.x = -newg.w/2
             newg.y = -newg.h/2
             # dont care for frmom/to, we'll return a single box anyway
 
             for g in layer:
-                if i < maxidx:
-                    ref = list(g.to)
-                else:
-                    ref = list(g.frm)
-                # TODO elastic positionning around the ideal position
-                # (g and g+1 may have the same med, then center both on it)
-                if i == maxidx:
-                    nx = minx
-                elif not ref:
-                    nx = (minx+maxx)/2
-                else:
-                    # center on the outline of rx
-                    # may want to center on rx center's center ?
-                    ref.sort(key=lambda a: (a.x))
-                    rx = list(ref)
-                    med = (rx[0].x +
-                           rx[len(rx)-1].x +
-                           rx[len(rx)-1].w - g.w) / 2.0
-                    nx = min([max([med, minx]), maxx])
+                if g.content:
+                    if i < maxidx:
+                        ref = list(g.to)
+                    else:
+                        ref = list(g.frm)
+                    # TODO elastic positionning around the ideal position
+                    # (g and g+1 may have the same med, then center both on it)
+                    if i == maxidx:
+                        nx = minx
+                    elif not ref:
+                        nx = (minx+maxx)/2
+                    else:
+                        # center on the outline of rx
+                        # may want to center on rx center's center ?
+                        ref.sort(key=lambda a: (a.x))
+                        rx = list(ref)
+                        med = (rx[0].x +
+                               rx[len(rx)-1].x +
+                               rx[len(rx)-1].w - g.w) / 2.0
+                        nx = min([max([med, minx]), maxx])
+                    #dx = nx+g.w/2
+                    dx = nx - (min(b.x for b in g.content))
+                    dy = g.y - miny
+                    print(dy)
+                    print(miny)
+                    print(g, g.x, g.y, g.w, g.h)
+                    for b in g.content:
+                        print("   1:", b, b.x, b.y)
+                        b.x += dx
+                        b.y -= dy
+                        print("   ", b, b.x, b.y)
+                        minx = nx+g.w
+                    maxx += g.w
 
-                dx = nx+g.w/2
-                for b in g.content:
-                    b.x += dx
-                minx = nx+g.w
-                maxx += g.w
-
+                    # for b in g.content:
+                    #     print("    ", b, b.x, dx)
+                    #     b.x += dx
+                    #     minx = nx+g.w
+                    #     maxx += g.w
+                    #     b.y -= dy
         layerbox = []
+        print("TMP2")
+        for l in layers:
+            for g in l:
+                print(g, g.x, g.y, g.w, g.h)
+
 
         max_layerbox = max(iter(layerbox_tmp))
         for i in range(0, max_layerbox + 1):
@@ -960,13 +1025,15 @@ class Positioning(object):
             b.x = -b.w/2
             b.y = -b.h/2
             g = self.Box(0, content=[b])
-            g.x = b.x - 20
-            g.y = b.y - 22
-            g.w = b.w + 40
-            g.h = b.h + 44
+            #g.x = b.x - 20
+            #g.y = b.y - 22
+            #g.w = b.w + 40
+            #g.h = b.h + 44
             # h[g] = b
             h[b] = g
             self.groups.append(g)
+            print("Content")
+            print(g, g.content)
         # init group.to/frmom
         # must always point to something that is in the 'groups' array
         # no self references
@@ -977,8 +1044,35 @@ class Positioning(object):
             g.frm = set(h[f] for f in g.content[0].frm
                         if h[f] != g and h[f] is not None)
         order = self.order_graph(self.groups)
+        print("Order1")
+        print(max(order.values()))
+        for i in range(0, max(order.values())+1):
+            for elt in order:
+                if order[elt] == i:
+                    print(elt, order[elt])
         # remove cycles frmom the graph
         self.make_tree(self.groups, order)
+        # set the size of the box depending on his layer
+        for i in range(max(order.values())+1):
+            layer_block = [g for g in order if order[g] == i]
+            print(layer_block)
+            max_w = max(g.content[0].w for g in layer_block)
+            max_h = max(g.content[0].h for g in layer_block)
+            min_x = min(g.content[0].x for g in layer_block)
+            min_y = min(g.content[0].y for g in layer_block)
+            for g in layer_block:
+                b = g.content[0]
+                g.x = min_x - self.inter_block
+                g.y = min_y - self.inter_block
+                g.w = max_w + (self.inter_block * 2)
+                g.h = max_h + (self.inter_block * 2)
+                # print(g.x, g.y, g.w, g.h)
+                # print(min_x, min_y, max_w, max_h)
+                # b.x = min_x + (self.inter_block * 2) + ((max_w - b.w) / 2)
+                # b.y = min_y + (self.inter_block * 2)
+                b.x = g.x + ((max_w - b.w) / 2) + self.inter_block
+                b.y = g.y + self.inter_block
+                # print(b.x, b.y)
 
     # def auto_arrange_step(self, groups=self.igroups):
     def auto_arrange_step(self, groups):
@@ -1146,8 +1240,8 @@ class Positioning(object):
         if (self.test_elt_not_in_list_range(int(ex_t), unused_range)
             and self.test_elt_not_in_list_range(int(ex_t)+1,
                                                 unused_range)):
-            print(unused_range)
-            print(int(ex_t))
+            #print(unused_range)
+            #print(int(ex_t))
             return 0
 
         # Regarde s'il y a un espace entre ex_t et les block a gauche
@@ -1185,26 +1279,26 @@ class Positioning(object):
         if not simple:
             # si on a une boucle
             if self.original_order[e.frm] > self.original_order[e.to]:
-                print("Boucle")
-                print(e.path)
+                #print("Boucle")
+                #print(e.path)
                 decx = self.pass_on_block(e, loop=True)
-                print(decx)
+                #print(decx)
                 e.decx = decx
                 e.path[1] = [ex_t + e.decx, ey_t]
-                print(e.path)
+                #print(e.path)
             # si on a une loop sur un block
             elif e.frm == e.to:
                 e.path[1] = [e.frm.x + e.frm.w + 10, ey_t]
             if not loop:
                 # si on a plus d'un niveau d'écart
                 if(self.original_order[e.frm] < self.original_order[e.to] - 1):
-                    print("Double niveau")
-                    print(e.path)
+                    #print("Double niveau")
+                    #print(e.path)
                     decx = self.pass_on_block(e)
-                    print(decx)
+                    #print(decx)
                     e.decx = decx
                     e.path[1] = [ex_t + e.decx, ey_t]
-                    print(e.path)
+                    #print(e.path)
 
     def check_edge_frm(self, e, pos, config, simple=False):
         ex_f = config[5] + pos * config[7]
@@ -1224,8 +1318,8 @@ class Positioning(object):
         e.posfrm = pos
 
     def auto_fix_pos_edge(self, simple=False, loop=False, cross_edge=False):
-        print("Block")
-        print(self.original_order)
+        #print("Block")
+        #print(self.original_order)
         for b in self.original_order:
             if cross_edge:
                 b.edges_to.sort(key=lambda x: (x.path[1][0]))
@@ -1294,7 +1388,7 @@ class Positioning(object):
 
     def auto_set_y_bottom(self):
         for b in self.original_order:
-            print("Bottom")
+            # print("Bottom")
             y0 = b.y - self.block_dist
             edges_left = [e for e in b.edges_frm
                           if e.path[2][0] < e.path[1][0]]
@@ -1306,23 +1400,23 @@ class Positioning(object):
 
             y_tmp = y0
             for e in edges_left:
-                print(e.path)
+                # print(e.path)
                 if e.path[0][0] != e.path[1][0]:
                     e.path[3] = y_tmp
                     y_tmp -= self.edge_dist
             y_tmp = y0
             for e in edges_right:
-                print(e.path)
+                # print(e.path)
                 if e.path[0][0] != e.path[1][0]:
                     e.path[3] = y_tmp
                     y_tmp -= self.edge_dist
 
 
     def auto_set_y(self, top=True):
-        print("SET_Y")
+        # print("SET_Y")
         for b in self.original_order:
             if top:
-                print("Top")
+                # print("Top")
                 y0 = b.y + b.h + self.block_dist
 
                 # Regle le probleme des blocks sur le meme level
@@ -1346,7 +1440,7 @@ class Positioning(object):
                 edges_left.sort(key=lambda e: (e.path[0][0]))
                 edges_right.sort(key=lambda e: (e.path[0][0]), reverse=True)
             else:
-                print("Bottom")
+                #print("Bottom")
                 y0 = b.y - self.block_dist
                 edges_left = [e for e in b.edges_frm
                               if e.path[2][0] < e.path[1][0]]
@@ -1356,11 +1450,11 @@ class Positioning(object):
                 edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
                 edges_right.sort(key=lambda e: (e.path[2][0]))
 
-            print(y0)
+            #print(y0)
             # Place the first part of the edges
             y_tmp = y0
             for e in edges_left:
-                print(e.path)
+                #print(e.path)
                 if top:
                     e.path[1][1] = y_tmp
                     y_tmp += self.edge_dist
@@ -1369,7 +1463,7 @@ class Positioning(object):
                     y_tmp -= self.edge_dist
             y_tmp = y0
             for e in edges_right:
-                print(e.path)
+                #print(e.path)
                 if top:
                     if e.path[0][0] == e.path[1][0]:
                         e.path[3] = y_tmp
