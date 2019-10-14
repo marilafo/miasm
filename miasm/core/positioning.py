@@ -34,7 +34,8 @@ class Positioning(object):
         def __init__(self, frm, to):
             self.frm = frm
             self.to = to
-            self.path = [[0, 0], [0, 0], [0, 0], 0]
+            #p0, p1, p2, dec_y, x1 or x2 depending edge simple or complex
+            self.path = [[0, 0], [0, 0], [0, 0], 0, 0, 0]
             self.posfrm = -1
             self.posto = -1
             self.decx = -1
@@ -113,13 +114,6 @@ class Positioning(object):
         return[minx_b, miny_b, maxx_b, maxy_b]
 
     def pattern_col(self, groups):
-        print("Pattern col")
-        for g in groups:
-            print(g, g.to, g.frm, g.content, g.x, g.y, g.w, g.h)
-            print([elt.x for elt in g.content])
-            print([elt.y for elt in g.content])
-            print([elt.w for elt in g.content])
-            print([elt.h for elt in g.content])
         try:
             head = next(g for g in groups if len(g.to) == 1
                         and len(next(iter(g.to)).frm) == 1
@@ -237,8 +231,6 @@ class Positioning(object):
         return True
 
     def merge_pattern_column(self, ar):
-        print("column")
-        print(ar)
         for i in range(0, len(ar) - 1):
             g = ar[i]
             gn = ar[i+1]
@@ -271,19 +263,11 @@ class Positioning(object):
         # moves boxes inside this group
         maxw = max(g.w for g in ar)
         fullh = sum(g.h for g in ar)
-        print("XXX")
-        for g in ar:
-            print(g, g.h)
         cury = -fullh/2
         for g in ar:
             dy = cury - g.y
-            print(cury)
-            print(fullh)
-            print(dy)
             for b in g.content:
-                print("Coucou1 ", b.y)
                 b.y += dy
-                print("Coucou2 ", b.y)
             cury += g.h
 
         # create remplacement group
@@ -319,8 +303,6 @@ class Positioning(object):
     # OK
     # a -> [b, c, d] -> e
     def merge_pattern_line(self, ar):
-        print("line")
-        print(ar)
         #for g in ar:
         #    self.group_remove_hz_margin(g)
 
@@ -329,8 +311,6 @@ class Positioning(object):
         maxh = max(g.h for g in ar)
         fullw = sum(g.w for g in ar)
         curx = -fullw/2
-        print(maxh)
-        print(fullw)
         for g in ar:
             # if no to, put all boxes at bottom ; if no frm, put them at top
             # if len(g.frm) == 1 and len(g.to) == 0:
@@ -415,8 +395,6 @@ class Positioning(object):
     # OK
     # a -> b -> c & a -> c
     def merge_pattern_ifend(self, head):
-        print("ifend")
-        print(head)
         head_to = list(head.to)
         if head_to[1] in head_to[0].to:
             ten = head_to[0]
@@ -454,8 +432,6 @@ class Positioning(object):
         return ten
 
     def merge_pattern_n_ifend(self, list_head, ten):
-        print("n ifend")
-        print(list_head)
         last_son = list_head[len(list_head) - 1]
         for head in list_head:
             if head is not last_son:
@@ -595,7 +571,6 @@ class Positioning(object):
             print("end")
 
     def pattern_layout_complex(self, groups):
-        print("complex")
         order = self.order_graph(groups)
 
         uniq = None
@@ -816,9 +791,7 @@ class Positioning(object):
     # take all groups, order them by order, layout as layers
     # always return a single group holding everything
     def layout_layers(self, groups):
-        print("layout layer")
         order = self.order_graph(groups)
-        print(order)
         # already a tree
         layers = self.create_layers(groups, order)
 
@@ -968,14 +941,9 @@ class Positioning(object):
                     #dx = nx+g.w/2
                     dx = nx - (min(b.x for b in g.content))
                     dy = g.y - miny
-                    print(dy)
-                    print(miny)
-                    print(g, g.x, g.y, g.w, g.h)
                     for b in g.content:
-                        print("   1:", b, b.x, b.y)
                         b.x += dx
                         b.y -= dy
-                        print("   ", b, b.x, b.y)
                         minx = nx+g.w
                     maxx += g.w
 
@@ -986,11 +954,6 @@ class Positioning(object):
                     #     maxx += g.w
                     #     b.y -= dy
         layerbox = []
-        print("TMP2")
-        for l in layers:
-            for g in l:
-                print(g, g.x, g.y, g.w, g.h)
-
 
         max_layerbox = max(iter(layerbox_tmp))
         for i in range(0, max_layerbox + 1):
@@ -1032,8 +995,6 @@ class Positioning(object):
             # h[g] = b
             h[b] = g
             self.groups.append(g)
-            print("Content")
-            print(g, g.content)
         # init group.to/frmom
         # must always point to something that is in the 'groups' array
         # no self references
@@ -1044,18 +1005,11 @@ class Positioning(object):
             g.frm = set(h[f] for f in g.content[0].frm
                         if h[f] != g and h[f] is not None)
         order = self.order_graph(self.groups)
-        print("Order1")
-        print(max(order.values()))
-        for i in range(0, max(order.values())+1):
-            for elt in order:
-                if order[elt] == i:
-                    print(elt, order[elt])
         # remove cycles frmom the graph
         self.make_tree(self.groups, order)
         # set the size of the box depending on his layer
         for i in range(max(order.values())+1):
             layer_block = [g for g in order if order[g] == i]
-            print(layer_block)
             max_w = max(g.content[0].w for g in layer_block)
             max_h = max(g.content[0].h for g in layer_block)
             min_x = min(g.content[0].x for g in layer_block)
@@ -1066,13 +1020,8 @@ class Positioning(object):
                 g.y = min_y - self.inter_block
                 g.w = max_w + (self.inter_block * 2)
                 g.h = max_h + (self.inter_block * 2)
-                # print(g.x, g.y, g.w, g.h)
-                # print(min_x, min_y, max_w, max_h)
-                # b.x = min_x + (self.inter_block * 2) + ((max_w - b.w) / 2)
-                # b.y = min_y + (self.inter_block * 2)
                 b.x = g.x + ((max_w - b.w) / 2) + self.inter_block
                 b.y = g.y + self.inter_block
-                # print(b.x, b.y)
 
     # def auto_arrange_step(self, groups=self.igroups):
     def auto_arrange_step(self, groups):
@@ -1164,16 +1113,16 @@ class Positioning(object):
                     todo.add(g)
         return res
 
-    def get_config_edges(self, b):
+    def get_config_edges(self, b, cross_edge = False):
         nb_et = len(b.edges_to)
         nb_ef = len(b.edges_frm)
-        if nb_et > 1:
+        if nb_et > 1 and cross_edge:
             ex_t = (b.x + (b.w/2)) - 20
             interxt = 40/(nb_et-1)
         else:
             ex_t = b.x + (b.w/2)
             interxt = 0
-        if nb_ef > 1:
+        if nb_ef > 1 and cross_edge:
             ex_f = (b.x + (b.w/2)) - 20
             interxf = 40/(nb_ef-1)
         else:
@@ -1185,6 +1134,7 @@ class Positioning(object):
 
     def pass_on_block(self, e, loop=False):
         ex_t = e.path[0][0]
+        ex_f = e.path[2][0]
         if loop:
             n_to = self.original_order[e.frm] + 1
             n_frm = self.original_order[e.to] - 1
@@ -1196,7 +1146,6 @@ class Positioning(object):
                           if (self.original_order[x] > n_frm
                               and self.original_order[x] < n_to
                               and x != e.to and x != e.frm)]
-
         if loop:
             conflict_block.append(e.to)
             conflict_block.append(e.frm)
@@ -1205,7 +1154,7 @@ class Positioning(object):
         unused_range = [(int(b.x) - self.block_dist,
                          int(b.x + b.w)+self.block_dist)
                         for b in conflict_block]
-
+        print("Unused", unused_range)
         # Add the edge on the unused_range
         for b in self.original_order:
             if b is not (e.frm or e.to):
@@ -1222,6 +1171,7 @@ class Positioning(object):
                             and self.original_order[tmp_e.to] >=
                             self.original_order[e.to])
                     ):
+                        #print("STOP", tmp_e.path)
                         unused_range.append((int(tmp_e.path[0][0]) -
                                              self.edge_dist,
                                              int(tmp_e.path[0][0]) +
@@ -1240,29 +1190,58 @@ class Positioning(object):
         if (self.test_elt_not_in_list_range(int(ex_t), unused_range)
             and self.test_elt_not_in_list_range(int(ex_t)+1,
                                                 unused_range)):
-            #print(unused_range)
-            #print(int(ex_t))
             return 0
+
+        # Test if there is a cross with the destination edge
+        if (self.test_elt_not_in_list_range(int(ex_f), unused_range)
+            and self.test_elt_not_in_list_range(int(ex_f)+1,
+                                                unused_range)):
+            return ex_f
 
         # Regarde s'il y a un espace entre ex_t et les block a gauche
         ex_t_int = int(ex_t)
-        max_left = int(max(r[1] for r in unused_range))
-        min_left = int(min(r[0] for r in unused_range))
+        max_left = max(int(max(r[1] for r in unused_range)), int(e.frm.x + e.frm.w + 1))
+        min_left = min(int(min(r[0] for r in unused_range)), int(e.frm.x - 1))
 
         newx = 0
-        for i in range(ex_t_int, max_left + 1):
+        #for i in range(ex_t_int, max_left + 1):
+        #for i in range(max_left + 1, int(e.frm.x + e.frm.w/2), -1):
+        #print("Hello", e.frm.x, e.frm.w)
+        #print("Hello", int(e.frm.x + e.frm.w/2))
+        #print("Hellu", ex_t_int)
+        print("Range", unused_range)
+
+        mid = int(e.frm.x + e.frm.w/2)
+        print("max", max_left, mid)
+        #for i in range(max_left, mid, -1):
+        for i in range(mid, max_left + 1):
             if self.test_elt_not_in_list_range(i, unused_range):
-                newx = i - ex_t
+                newx = (i - ex_t, i)
+                print(i - ex_t, i, ex_t)
                 break
 
-        for i in range(ex_t_int, min_left - 1):
+        print("min", mid, min_left)
+        for i in range(mid, min_left - 2, -1):
+            #for i in range(int(e.frm.x + e.frm.w/2), min_left - 2, -1):
+            #for i in range(min_left - 1, e.frm.x + e.frm.w/2):
             if self.test_elt_not_in_list_range(i, unused_range):
-                tmp_newx = ex_t - abs(i)
-                if abs(newx) < abs(tmp_newx):
-                    return newx
+                tmp_newx = ex_t - i
+                print("diff", newx[0], tmp_newx)
+                if abs(newx[0]) < abs(tmp_newx):
+                    if newx[1] >= max_left:
+                        return newx[1] + (n_to - n_frm) * self.edge_dist
+                    else:
+                        return newx[1]
+                elif abs(newx[0]) == abs(tmp_newx):
+                    print("equal!!!")
                 else:
-                    return tmp_newx
-        return newx
+                    if i <= min_left -1:
+                        return i - (n_to - n_frm) * self.edge_dist
+                    else:
+                        return i
+
+        #if max_left < mid 
+        return newx[1]
 
     def test_elt_not_in_list_range(self, elt, list_range):
         for r in list_range:
@@ -1270,74 +1249,75 @@ class Positioning(object):
                 return False
         return True
 
-    def check_edge_to(self, e, pos, config, simple=False, loop=False):
+    def check_edge_to(self, e, pos, config):
         ex_t = config[1] + pos * config[3]
         ey_t = config[2]
         e.posto = pos
         e.path[0] = [ex_t, ey_t]
         e.path[1] = [ex_t, ey_t]
-        if not simple:
-            # si on a une boucle
-            if self.original_order[e.frm] > self.original_order[e.to]:
-                #print("Boucle")
-                #print(e.path)
-                decx = self.pass_on_block(e, loop=True)
-                #print(decx)
-                e.decx = decx
-                e.path[1] = [ex_t + e.decx, ey_t]
-                #print(e.path)
+        e.path[4] = e.path[0][0]
+        e.path[3] = e.path[2][1]
+        e.path[5] = e.path[2][0]
+        # si on a une boucle
+        if self.original_order[e.frm] > self.original_order[e.to]:
+            print("Boucle")
+            print(e.path)
+            decx = self.pass_on_block(e, loop=True)
+            print(decx)
+            e.decx = decx
+            if decx != 0:
+                e.path[1] = [decx, ey_t]
+            e.path[4] = e.path[1][0]
+            e.path[5] = e.path[1][0]
+            print(e.path)
             # si on a une loop sur un block
-            elif e.frm == e.to:
-                e.path[1] = [e.frm.x + e.frm.w + 10, ey_t]
-            if not loop:
-                # si on a plus d'un niveau d'écart
-                if(self.original_order[e.frm] < self.original_order[e.to] - 1):
-                    #print("Double niveau")
-                    #print(e.path)
-                    decx = self.pass_on_block(e)
-                    #print(decx)
-                    e.decx = decx
-                    e.path[1] = [ex_t + e.decx, ey_t]
-                    #print(e.path)
+        elif e.frm == e.to:
+            e.path[1] = [e.frm.x + e.frm.w + self.block_dist, ey_t]
+            e.path[4] = e.frm.x + e.frm.w + self.block_dist
+            # si on a plus d'un niveau d'écart
+        elif(self.original_order[e.frm] < self.original_order[e.to] - 1):
+            print("Double niveau")
+            print(e.path)
+            decx = self.pass_on_block(e)
+            print(decx)
+            print(ex_t)
+            e.decx = decx
+            if decx != 0:
+                e.path[1] = [decx, ey_t]
+            e.path[4] = e.path[1][0]
+            e.path[5] = e.path[1][0]
+            print(e.path)
 
-    def check_edge_frm(self, e, pos, config, simple=False):
+    def check_edge_frm(self, e, pos, config):
         ex_f = config[5] + pos * config[7]
         ey_f = config[6]
-        # if not simple:
-        #     if((self.original_order[e.frm] == self.original_order[e.to] - 1)
-        #        or (self.original_order[e.frm] == self.original_order[e.to]
-        #            and e.frm != e.to)):
-        #         e.path[1] = [ex_f, ey_f]
-        #     else:
-        #         if len(e.path) == 2:
-        #             e.path.insert(2, [ex_f, ey_f])
-        #         else:
-        #             e.path[2] = [ex_f, ey_f]
-        # else:
         e.path[2] = [ex_f, ey_f]
         e.posfrm = pos
 
-    def auto_fix_pos_edge(self, simple=False, loop=False, cross_edge=False):
-        #print("Block")
-        #print(self.original_order)
+    def auto_fix_pos_edge(self, cross_edge=False):
         for b in self.original_order:
             if cross_edge:
-                b.edges_to.sort(key=lambda x: (x.path[1][0]))
-                b.edges_frm.sort(key=lambda x: (x.path[1][0]))
+                b.edges_frm.sort(key=lambda x: (x.path[4]))
+            else:
+                b.edges_frm.sort(key=lambda x: (x.frm.x))
+            config = self.get_config_edges(b, cross_edge)
+            posfrm = 0
+
+            for e in b.edges_frm:
+                if e.frm in self.original_order:
+                    self.check_edge_frm(e, posfrm, config)
+                posfrm += 1
+        for b in self.original_order:
+            if cross_edge:
+                b.edges_to.sort(key=lambda x: (x.path[5]))
             else:
                 b.edges_to.sort(key=lambda x: (x.to.x))
-                b.edges_frm.sort(key=lambda x: (x.frm.x))
-            config = self.get_config_edges(b)
+            config = self.get_config_edges(b, cross_edge)
             posto = 0
             for e in b.edges_to:
                 if e.to in self.original_order:
-                    self.check_edge_to(e, posto, config, simple, loop)
+                    self.check_edge_to(e, posto, config)
                 posto += 1
-            posfrm = 0
-            for e in b.edges_frm:
-                if e.frm in self.original_order:
-                    self.check_edge_frm(e, posfrm, config, simple)
-                posfrm += 1
 
     def auto_set_y_top(self):
         max_order = max(self.original_order.values())
@@ -1374,7 +1354,7 @@ class Positioning(object):
                                      current[j][0].y + current[j][0].h)
                 y0_left = self.set_edges_y(current[j][1], max_block_left)
 
-    # Set the edges elt[block, edges_left, edges_right]
+
     def set_edges_y(self, edges, y):
         # TODO rajouter test block sur le chemin
         y_tmp = y
@@ -1411,135 +1391,68 @@ class Positioning(object):
                     e.path[3] = y_tmp
                     y_tmp -= self.edge_dist
 
-
-    def auto_set_y(self, top=True):
-        # print("SET_Y")
-        for b in self.original_order:
-            if top:
-                # print("Top")
-                y0 = b.y + b.h + self.block_dist
-
-                # Regle le probleme des blocks sur le meme level
-                for block in self.original_order:
-                    if self.original_order[b] == self.original_order[block]:
-                        for e1 in b.edges_to:
-                            for e2 in block.edges_to:
-                                if e1.to == e2.to:
-                                    if b.x < block.x and b.x < e1.to.x:
-                                        y0 = y0 + ((len(block.edges_to)+1)
-                                                   * self.edge_dist)
-                                    elif b.x > block.x and b.x >= e1.to.x:
-                                        y0 = y0 + ((len(block.edges_to)+1)
-                                                   * self.edge_dist)
-
-                edges_left = [e for e in b.edges_to
-                              if e.path[1][0] < e.path[0][0]]
-                edges_right = [e for e in b.edges_to
-                               if e.path[1][0] >= e.path[0][0]]
-                # Devide the edges from left and right edges
-                edges_left.sort(key=lambda e: (e.path[0][0]))
-                edges_right.sort(key=lambda e: (e.path[0][0]), reverse=True)
-            else:
-                #print("Bottom")
-                y0 = b.y - self.block_dist
-                edges_left = [e for e in b.edges_frm
-                              if e.path[2][0] < e.path[1][0]]
-                edges_right = [e for e in b.edges_frm
-                               if e.path[2][0] >= e.path[1][0]]
-                # Devide the edges from left and right edges
-                edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
-                edges_right.sort(key=lambda e: (e.path[2][0]))
-
-            #print(y0)
-            # Place the first part of the edges
-            y_tmp = y0
-            for e in edges_left:
-                #print(e.path)
-                if top:
-                    e.path[1][1] = y_tmp
-                    y_tmp += self.edge_dist
-                elif e.path[0][0] != e.path[1][0]:
-                    e.path[3] = y_tmp
-                    y_tmp -= self.edge_dist
-            y_tmp = y0
-            for e in edges_right:
-                #print(e.path)
-                if top:
-                    if e.path[0][0] == e.path[1][0]:
-                        e.path[3] = y_tmp
-                    else:
-                        e.path[1][1] = y_tmp
-                    y_tmp += self.edge_dist
-                else:
-                    if e.path[0][0] != e.path[1][0]:
-                        e.path[3] = y_tmp
-                        y_tmp -= self.edge_dist
-
-    # def auto_check_edge_superposition(self):
-    #     self.y_used_left = {}
-    #     self.y_used_right = {}
-    #     # print(self.original_order)
+    # def auto_set_y(self, top=True):
+    #     # print("SET_Y")
     #     for b in self.original_order:
-    #         # print(b)
-    #         block_order = self.original_order[b]
+    #         if top:
+    #             # print("Top")
+    #             y0 = b.y + b.h + self.block_dist
 
-    #         # Edge arriving on the block
-    #         to_check = [e for e in b.edges_frm if len(b.edges_frm) >= 2]
-    #         # Edge with siblinks
-    #         for elt in b.frm:
-    #             for e in elt.edges_to:
-    #                 if self.original_order[e.to] == block_order and e.to != b:
-    #                     to_check.append(e)
+    #             # Regle le probleme des blocks sur le meme level
+    #             for block in self.original_order:
+    #                 if self.original_order[b] == self.original_order[block]:
+    #                     for e1 in b.edges_to:
+    #                         for e2 in block.edges_to:
+    #                             if e1.to == e2.to:
+    #                                 if b.x < block.x and b.x < e1.to.x:
+    #                                     y0 = y0 + ((len(block.edges_to)+1)
+    #                                                * self.edge_dist)
+    #                                 elif b.x > block.x and b.x >= e1.to.x:
+    #                                     y0 = y0 + ((len(block.edges_to)+1)
+    #                                                * self.edge_dist)
 
-    #         if len(b.edges_frm) < 2:
-    #             for e in b.edges_frm:
-    #                 if e not in to_check:
-    #                     e.path[3] = e.path[2][1] - self.edge_dist*2
-    #                 continue
+    #             edges_left = [e for e in b.edges_to
+    #                           if e.path[1][0] < e.path[0][0]]
+    #             edges_right = [e for e in b.edges_to
+    #                            if e.path[1][0] >= e.path[0][0]]
+    #             # Devide the edges from left and right edges
+    #             edges_left.sort(key=lambda e: (e.path[0][0]))
+    #             edges_right.sort(key=lambda e: (e.path[0][0]), reverse=True)
+    #         else:
+    #             #print("Bottom")
+    #             y0 = b.y - self.block_dist
+    #             edges_left = [e for e in b.edges_frm
+    #                           if e.path[2][0] < e.path[1][0]]
+    #             edges_right = [e for e in b.edges_frm
+    #                            if e.path[2][0] >= e.path[1][0]]
+    #             # Devide the edges from left and right edges
+    #             edges_left.sort(key=lambda e: (e.path[2][0]), reverse=True)
+    #             edges_right.sort(key=lambda e: (e.path[2][0]))
 
-    #         self.indent_left = self.edge_dist
-    #         self.indent_right = self.edge_dist
-
-    #         for e in to_check:
-    #             if self.original_order[e.frm] >= self.original_order[e.to]:
-    #                 n_to = self.original_order[e.frm] + 1
-    #                 n_frm = self.original_order[e.to] - 1
-    #                 conflict_box = []
+    #         #print(y0)
+    #         # Place the first part of the edges
+    #         y_tmp = y0
+    #         for e in edges_left:
+    #             #print(e.path)
+    #             if top:
+    #                 e.path[1][1] = y_tmp
+    #                 y_tmp += self.edge_dist
+    #             elif e.path[0][0] != e.path[1][0]:
+    #                 e.path[3] = y_tmp
+    #                 y_tmp -= self.edge_dist
+    #         y_tmp = y0
+    #         for e in edges_right:
+    #             #print(e.path)
+    #             if top:
+    #                 if e.path[0][0] == e.path[1][0]:
+    #                     e.path[3] = y_tmp
+    #                 else:
+    #                     e.path[1][1] = y_tmp
+    #                 y_tmp += self.edge_dist
     #             else:
-    #                 n_to = self.original_order[e.to]
-    #                 n_frm = self.original_order[e.frm]
-
-    #                 print(n_to)
-    #                 print(n_frm)
-    #                 # Prendre le min des blocs suivants
-    #                 conflict_box = [(int(elt.y),
-    #                                  int(elt.x) + self.block_dist,
-    #                                  int(elt.x + elt.y) + self.block_dist)
-    #                                 for elt in self.original_order
-    #                                 if (self.original_order[elt] > n_frm
-    #                                     and self.original_order[elt] < n_to
-    #                                     and elt != e.to and elt != e.frm)]
-
-    #             y0 = e.path[2][1]
-    #             if e.path[1][0] <= e.path[2][0]:
-    #                 y0 = y0 - self.indent_left
-    #             else:
-    #                 y0 = y0 - self.indent_right
-
-    #             print("Yo")
-    #             print(e.path)
-    #             print(conflict_box)
-
-    #             test_conflict = [elt[0] for elt in conflict_box
-    #                              if e.path[2][0] > elt[1]
-    #                              and e.path[2][0] < elt[2]]
-    #             if test_conflict:
-    #                 print("Conflict")
-    #                 y0 = min(test_conflict) - self.block_dist
-
-    #             y0 -= y0 % self.edge_dist
-    #             e.path[3] = y0
-    #             self.set_height(e.path)
+    #                 if e.path[0][0] != e.path[1][0]:
+    #                     e.path[3] = y_tmp
+    #                     y_tmp -= self.edge_dist
 
     def auto_arrange_edges(self):
         # Set src and dest for all edges
@@ -1552,7 +1465,13 @@ class Positioning(object):
 
         # Replace les edges à la sortie des boîtes pour ne
         # pas avoir de croisements
+        print("Pass2")
         self.auto_fix_pos_edge(cross_edge=True)
+
+        print("End correct x")
+        for b in self.original_order:
+            for e in b.edges_to:
+                print(e, e.path)
         # The 2 previous func deal with x now deal with y
         # Permet aux fleches qui arrivent sur une même box de ne
         # pas se surperposer

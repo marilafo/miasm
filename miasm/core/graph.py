@@ -349,12 +349,14 @@ class DiGraph(object):
                     for s in t:
                         new_x = total_len * (text_space) + x
                         total_len += len(" ".join(s.split()))
-                        self.format_text_str(s, list(regs), g_node, new_x, y, id)
+                        self.format_text_str(s, list(regs), g_node,
+                                             new_x, y, id)
                         tmp += 1
                         if tmp < len(t):
                             loc_text = ET.SubElement(g_node, "text")
                             new_x = total_len * (text_space) + x
-                            self.set_loc_text(loc_text, elt[0], new_x, y, id, elt[1])
+                            self.set_loc_text(loc_text, elt[0],
+                                              new_x, y, id, elt[1])
                             total_len += len(elt[0])
                 else:
                     loc_text = ET.SubElement(g_node, "text")
@@ -369,11 +371,11 @@ class DiGraph(object):
         """Render svg graph with HTML"""
 
         svg_xml = ET.Element("svg")
-        #svg_xml.set("xmlns:svg", "http://www.w3.org/2000/svg")
+        # svg_xml.set("xmlns:svg", "http://www.w3.org/2000/svg")
         svg_xml.set("xmlns", "http://www.w3.org/2000/svg")
         svg_xml.set("version", "1.1")
 
-        #Permettre de surligner les registres
+        # Permettre de surligner les registres
         defs = ET.SubElement(svg_xml, "defs")
         filt = ET.SubElement(defs, "filter")
         feflood = ET.SubElement(filt, "feFlood")
@@ -431,7 +433,8 @@ class DiGraph(object):
                     else:
                         my_x = box_x + 5 + 8 * text_space
                     my_y = box_y + text_line_space * (i+1)
-                    self.format_text_str(col.text, col.regs, g_node, my_x, my_y, i)
+                    self.format_text_str(col.text, col.regs,
+                                         g_node, my_x, my_y, i)
                     if col.form != "offset":
                         i = i + 1
 
@@ -450,14 +453,15 @@ class DiGraph(object):
             node_rect.set("y", "%s" % str(box_y))  # Place
             node_rect.set("ry", "%s" % str(4))
             p_node.set("points",
-                       "%s,%s %s,%s %s,%s %s,%s" % (str(box_x + 1),
-                                                    str(box_y + 1),
-                                                    str(box_x + 1),
-                                                    str(box_y + text_line_space + 1),
-                                                    str(box_x + box_w - 1),
-                                                    str(box_y + text_line_space + 1),
-                                                    str(box_x + box_w - 1),
-                                                    str(box_y + 1)))
+                       "%s,%s %s,%s %s,%s %s,%s"
+                       % (str(box_x + 1),
+                          str(box_y + 1),
+                          str(box_x + 1),
+                          str(box_y + text_line_space + 1),
+                          str(box_x + box_w - 1),
+                          str(box_y + text_line_space + 1),
+                          str(box_x + box_w - 1),
+                          str(box_y + 1)))
 
         i = 1
         for src, dst in self.edges():
@@ -478,55 +482,25 @@ class DiGraph(object):
             arrow_edge.set("stroke",  "%s" % str(attrs['color']))
             arrow_edge.set("stroke-width", "1")
             e_path = g_plac.edges[self.nodeid(src), self.nodeid(dst)].path
-            # print("Edge")
-            # print(src, dst)
-            # print(e_path)
-            # print("\n")
-            arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-                                                                              str(e_path[0][1]),
-                                                                              str(e_path[0][0]),
-                                                                              str(e_path[1][1]),
-                                                                              str(e_path[1][0]),
-                                                                              str(e_path[1][1]),
-                                                                              str(e_path[1][0]),
-                                                                              str(e_path[3]),
-                                                                              str(e_path[2][0]),
-                                                                              str(e_path[3]),
-                                                                              str(e_path[2][0]),
-                                                                              str(e_path[2][1])))
-            # if len(e_path) == 3:
-            #     arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-            #                                                           str(e_path[0][1]),
-            #                                                           str(e_path[0][0]),
-            #                                                           str(e_path[2][1]),
-            #                                                           #str(e_path[1][1] - 10), 
-            #                                                           str(e_path[1][0]),
-            #                                                           str(e_path[2][1]),
-            #                                                           #str(e_path[1][1] - 10),
-            #                                                           str(e_path[1][0]),
-            #                                                           str(e_path[1][1])))
-            # elif len(e_path) == 4:
-            #     arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
-            #                                                                       str(e_path[0][1]),
-            #                                                                       str(e_path[0][0]),
-            #                                                                       str(e_path[0][1]+15),
-            #                                                                       str(e_path[1][0]),
-            #                                                                       str(e_path[0][1] +15),
-            #                                                                       str(e_path[1][0]),
-            #                                                                       str(e_path[3][1]),
-            #                                                                       #str(e_path[2][1]),
-            #                                                                       str(e_path[2][0]),
-            #                                                                       str(e_path[3][1]),
-            #                                                                       #str(e_path[2][1]),
-            #                                                                       str(e_path[2][0]),
-            #                                                                       str(e_path[2][1])))
-            # svg["edge"].extend([[i], self.nodeid(src), self.nodeid(dst)])
-
+            print("Edge")
+            print(src, dst)
+            print(e_path)
+            print("\n")
+            arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s"
+                           % (str(e_path[0][0]), str(e_path[0][1]),
+                              str(e_path[0][0]), str(e_path[1][1]),
+                              str(e_path[1][0]), str(e_path[1][1]),
+                              str(e_path[1][0]), str(e_path[3]),
+                              str(e_path[2][0]), str(e_path[3]),
+                              str(e_path[2][0]), str(e_path[2][1])))
         s = g_plac.boundingbox()
 
         svg_xml.set("width", "%spt" % str((s[2] - s[0]) * 2 + 50))
         svg_xml.set("height", "%spt" % str((s[3] - s[1]) * 2 + 50))
-        svg_xml.set("viewBox", "%s %s %s %s" % (str(s[0] - 20), str(s[1] - 20), str(s[2] - s[0] + 40), str(s[3] - s[1] + 40)))
+        svg_xml.set("viewBox", "%s %s %s %s" % (str(s[0] - 20),
+                                                str(s[1] - 20),
+                                                str(s[2] - s[0] + 40),
+                                                str(s[3] - s[1] + 40)))
         g.set("id", "loc?")
         g_title.set("id", "test")
         g_title.text = "asm_graph"
@@ -536,7 +510,6 @@ class DiGraph(object):
         out += html_after
 
         return out.decode()
-
 
     def dot(self):
         """Render dot graph with HTML"""

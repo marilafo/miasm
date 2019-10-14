@@ -70,8 +70,8 @@ def print_svg(nodes, edges):
         node_rect.set("y", "%s" % str(box_y))  # Place
 
         node_rect.set("ry", "%s" % str(7))
-        print("Node")
-        print(box_x, box_y, box_w, box_h)
+        #print("Node")
+        #print(box_x, box_y, box_w, box_h)
         p_node.set("points",
                    "%s,%s %s,%s %s,%s %s,%s" % (str(box_x),
                                                 str(box_y),
@@ -88,8 +88,8 @@ def print_svg(nodes, edges):
         e_path = g_plac.edges[(src, dst)].path
         if len(e_path) < 2:
             continue
-        #print("EEEDDDDDGGGGEEEE")
-        #print(e_path)
+        print("EEEDDDDDGGGGEEEE")
+        print(e_path)
         g_edge = ET.SubElement(g, "g")
         g_edge.set("id", "edge%s%s" % (str(src), str(dst)))
         g_edge.set("class", "edge")
@@ -102,7 +102,7 @@ def print_svg(nodes, edges):
         arrow_edge = ET.SubElement(g_edge, "polyline")
         arrow_edge.set("fill",  "%s" % "none")
         arrow_edge.set("stroke",  "%s" % "blue")
-        arrow_edge.set("stroke-width", "3")
+        arrow_edge.set("stroke-width", "1")
 
         arrow_edge.set("points", "%s,%s %s,%s %s,%s %s,%s %s,%s %s,%s" % (str(e_path[0][0]),
                                                                           str(e_path[0][1]),
@@ -220,6 +220,7 @@ def test(nb):
     it = 0
     for i in list_test:
         if nb == -1 or nb == it:
+            print("Test", it)
             out = open("it%s.svg" % str(it), 'w')
             svg = print_svg(i[0], i[1])
             out.write(svg)
@@ -240,3 +241,4 @@ test(-1)
 #test(15)
 #test(17)
 #test(18)
+#test(22)
