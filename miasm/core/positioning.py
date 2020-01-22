@@ -1102,6 +1102,7 @@ class Positioning(object):
                         tmp = newx[1] + (n_to - n_frm) * self.edge_dist
                         #if not self.test_elt_not_in_list_range(tmp,
                         #                                       unused_range):
+                        print(ex_t, newx, )
                         return tmp
                     return newx[1]
                 elif abs(newx[0]) == abs(tmp_newx):
@@ -1188,66 +1189,43 @@ class Positioning(object):
                     self.check_edge_to(e, posto, config)
                 posto += 1
 
-    # def auto_set_y_top(self):
-    #     max_order = max(self.original_order.values())
-    #     for i in range(max_order+1):
-    #         current = []
-    #         for b in self.original_order:
-    #             if self.original_order[b] == i:
-    #                 # Devide the edges from left and right edges
-    #                 edges_left = [e for e in b.edges_to
-    #                               if e.path[1][0] < e.path[0][0]]
-    #                 edges_right = [e for e in b.edges_to
-    #                                if e.path[1][0] >= e.path[0][0]]
-
-    #                 edges_left.sort(key=lambda e: (e.path[0][0]))
-    #                 edges_right.sort(key=lambda e: (e.path[0][0]),
-    #                                  reverse=True)
-
-    #                 current.append([b, edges_left, edges_right])
-    #         current.sort(key=lambda elt: (elt[0].x), reverse=True)
-    #         # Set edges at the border of the block
-    #         max_block_left = current[-1][0].y + current[-1][0].h + self.block_dist
-    #         max_block_right = current[0][0].y + current[0][0].h + self.block_dist
-    #         y0_left = self.set_edges_y(current[-1][1], max_block_left)
-    #         y0_right = self.set_edges_y(current[0][2], max_block_right)
-
-    #         for j in range(1, len(current)):
-    #             max_block_right = max(y0_right,
-    #                                   current[j][0].y + current[j][0].h)
-    #             y0_right = self.set_edges_y(current[j][2], max_block_right)
-    #         current.reverse()
-    #         y0_left = max(y0_right, y0_left)
-    #         for i in range(1, len(current)):
-    #             max_block_left = max(y0_left,
-    #                                  current[j][0].y + current[j][0].h)
-    #            y0_left = self.set_edges_y(current[j][1], max_block_left)
-
     def set_edges_y(self, edges, y, bottom=False):
         # TODO rajouter test block sur le chemin
         if bottom:
             y_tmp = y
             for e in edges:
+                print('inside path')
+                print(e.path)
+                print(y_tmp)
+                print(self.edge_dist)
                 if e.path[3] == e.path[2][1]:
                     if e.path[1][1] == e.path[3]:
-                        e.path[3] = y_tmp
-                        e.path[1][1] = y_tmp
+                        if e.path[2][1] > y_tmp or e.path[2][1] <= e.path[0][1]:
+                            e.path[3] = y_tmp
+                            e.path[1][1] = y_tmp
                     else:
-                        e.path[3] = y_tmp
+                        if e.path[2][1] > y_tmp or e.path[2][1] <= e.path[0][1]:
+                            e.path[3] = y_tmp
                 y_tmp -= self.edge_dist
         else:
+            print("je suis dans le tps")
             y_tmp = y
             for e in edges:
                 if e.path[0][1] == e.path[1][1]:
                     if e.path[3] == e.path[1][1]:
-                        e.path[3] = y_tmp
-                        e.path[1][1] = y_tmp
+                        print(e.path)
+                        print(y_tmp)
+                        if e.path[2][1] > y_tmp or e.path[2][1] <= e.path[0][1]:
+                            e.path[3] = y_tmp
+                            e.path[1][1] = y_tmp
                     else:
-                        e.path[1][1] = y_tmp
+                        if e.path[2][1] > y_tmp or e.path[2][1] <= e.path[0][1]:
+                            e.path[1][1] = y_tmp
                 y_tmp += self.edge_dist
         return y_tmp
 
     def auto_set_y(self, bottom=False):
+        print("auto set y")
         max_order = max(self.original_order.values())
         for i in range(max_order + 1):
             current = []
@@ -1293,17 +1271,23 @@ class Positioning(object):
                 max_block_right = current[0][0].y + current[0][0].h + self.block_dist
                 print("max_block_left %d" % max_block_left)
                 print("max_block_right %d" % max_block_right)
-            print("y0 left")
             y0_left = self.set_edges_y(current[-1][1], max_block_left, bottom)
-            print("y0 right")
+            print("y0 left : %d"%y0_left)
             y0_right = self.set_edges_y(current[0][2], max_block_right, bottom)
-
+            print("y0 right : %d"%y0_right)
             for j in range(1, len(current)):
                 print("j: %d"%j)
                 if bottom:
-                    max_block_right = max(y0_right, current[j][0].y - self.edge_dist)
+                    if y0_right < current[j][0].y - self.edge_dist:
+                        max_block_right = current[j][0].y - self.edge_dist
+                    else:
+                        max_block_right = min(y0_right, current[j][0].y - self.edge_dist)
                 else:
-                    max_block_right = max(y0_right, current[j][0].y + current[j][0].h + self.edge_dist)
+                    if y0_right < current[j][0].y + current[j][0].h + self.edge_dist:
+                        max_block_right =  current[j][0].y + current[j][0].h + self.edge_dist
+                    else:
+                        max_block_right = max(y0_right, current[j][0].y + current[j][0].h + self.edge_dist)
+                print("la")
                 y0_right = self.set_edges_y(current[j][2], max_block_right, bottom)
             current.reverse()
             y0_left = max(y0_right, y0_left)
