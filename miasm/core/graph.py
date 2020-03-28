@@ -44,6 +44,19 @@ function colorRegister(a) {
     }
 }
 
+var edge = document.querySelectorAll("polyline");
+for (const e of edge){
+    e.onclick = function() {zoomEdge(this)};
+}
+
+function zoomEdge(a){
+    var all = document.getElementsByClassName("edge");
+    for (var i = 0; i < all.length; i++){
+        all[i].setAttribute("stroke-width", "2");
+    }
+    a.setAttribute("stroke-width", "4");
+}
+
 </script>
 
 </html>
@@ -478,9 +491,10 @@ class DiGraph(object):
             line_edge.set("fill", "none")
             line_edge.set("stroke", "%s" % str(attrs['color']))
             arrow_edge = ET.SubElement(g_edge, "polyline")
-            arrow_edge.set("fill",  "%s" % "none")
+            arrow_edge.set("class", "edge")
+            arrow_edge.set("fill",  "none")
             arrow_edge.set("stroke",  "%s" % str(attrs['color']))
-            arrow_edge.set("stroke-width", "1")
+            arrow_edge.set("stroke-width", "2")
             e_path = g_plac.edges[self.nodeid(src), self.nodeid(dst)].path
             print("Edge")
             print(src, dst)
